@@ -8,22 +8,96 @@ const uploadMiddleware = require('../middleware/upload.middleware');
 const paginationMiddleware = require('../middleware/pagination.middleware');
 
 // College Public Routes
-router.get('/colleges', 
+/**
+ * @swagger
+ * /college/colleges:
+ *   get:
+ *     summary: Get all colleges
+ *     tags: [Colleges]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of colleges
+ */
+router.get('/colleges',
     paginationMiddleware,
     collegeController.getAllColleges
 );
 
-router.get('/colleges/search', 
+/**
+ * @swagger
+ * /college/colleges/search:
+ *   get:
+ *     summary: Search colleges
+ *     tags: [Colleges]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Search results
+ */
+router.get('/colleges/search',
     paginationMiddleware,
     collegeController.searchColleges
 );
 
-router.get('/colleges/:collegeCode', 
+/**
+ * @swagger
+ * /college/colleges/{collegeCode}:
+ *   get:
+ *     summary: Get college by code
+ *     tags: [Colleges]
+ *     parameters:
+ *       - in: path
+ *         name: collegeCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: College details
+ */
+router.get('/colleges/:collegeCode',
     collegeController.getCollegeByCode
 );
 
 // College Management (Admin only)
-router.post('/colleges', 
+/**
+ * @swagger
+ * /college/create:
+ *   post:
+ *     summary: Create college
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *               emailDomain:
+ *                 type: string
+ *               logo:
+ *                 type: file
+ *               banner:
+ *                 type: file
+ *     responses:
+ *       201:
+ *         description: College created
+ */
+router.post('/create',
     authMiddleware.authenticate,
     authMiddleware.authorize(['super_admin']),
     uploadMiddleware.fields([
@@ -34,127 +108,565 @@ router.post('/colleges',
     collegeController.createCollege
 );
 
-router.put('/colleges/:collegeId', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}:
+ *   put:
+ *     summary: Update college
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: College updated
+ */
+router.put('/colleges/:collegeId',
     authMiddleware.authenticate,
     authMiddleware.authorize(['super_admin', 'college_admin']),
     collegeController.updateCollege
 );
 
-router.delete('/colleges/:collegeId', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}:
+ *   delete:
+ *     summary: Delete college
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: College deleted
+ */
+router.delete('/colleges/:collegeId',
     authMiddleware.authenticate,
     authMiddleware.authorize(['super_admin']),
     collegeController.deleteCollege
 );
 
 // College Invitations
-router.post('/colleges/:collegeId/invite', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}/invite:
+ *   post:
+ *     summary: Invite user to college
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Invitation sent
+ */
+router.post('/colleges/:collegeId/invite',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin']),
     collegeController.inviteToCollege
 );
 
-router.get('/invitations/:token', 
+/**
+ * @swagger
+ * /colleges/invitations/{token}:
+ *   get:
+ *     summary: Get invitation details
+ *     tags: [Colleges]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Invitation details
+ */
+router.get('/invitations/:token',
     collegeController.getInvitation
 );
 
-router.post('/invitations/:token/accept', 
+/**
+ * @swagger
+ * /colleges/invitations/{token}/accept:
+ *   post:
+ *     summary: Accept invitation
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Invitation accepted
+ */
+router.post('/invitations/:token/accept',
     authMiddleware.authenticate,
     collegeController.acceptInvitation
 );
 
-router.post('/invitations/:token/reject', 
+/**
+ * @swagger
+ * /colleges/invitations/{token}/reject:
+ *   post:
+ *     summary: Reject invitation
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Invitation rejected
+ */
+router.post('/invitations/:token/reject',
     authMiddleware.authenticate,
     collegeController.rejectInvitation
 );
 
 // Department Routes
-router.get('/colleges/:collegeId/departments', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}/departments:
+ *   get:
+ *     summary: Get college departments
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of departments
+ */
+router.get('/colleges/:collegeId/departments',
     authMiddleware.authenticate,
     paginationMiddleware,
     departmentController.getCollegeDepartments
 );
 
-router.post('/colleges/:collegeId/departments', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}/departments:
+ *   post:
+ *     summary: Create department
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Department created
+ */
+router.post('/colleges/:collegeId/departments',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin']),
     departmentController.createDepartment
 );
 
-router.get('/departments/:departmentId', 
+/**
+ * @swagger
+ * /colleges/departments/{departmentId}:
+ *   get:
+ *     summary: Get department by ID
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: departmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Department details
+ */
+router.get('/departments/:departmentId',
     authMiddleware.authenticate,
     departmentController.getDepartmentById
 );
 
-router.put('/departments/:departmentId', 
+/**
+ * @swagger
+ * /colleges/departments/{departmentId}:
+ *   put:
+ *     summary: Update department
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: departmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Department updated
+ */
+router.put('/departments/:departmentId',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin', 'hod']),
     departmentController.updateDepartment
 );
 
-router.delete('/departments/:departmentId', 
+/**
+ * @swagger
+ * /colleges/departments/{departmentId}:
+ *   delete:
+ *     summary: Delete department
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: departmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Department deleted
+ */
+router.delete('/departments/:departmentId',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin']),
     departmentController.deleteDepartment
 );
 
 // Department Members
-router.get('/departments/:departmentId/members', 
+/**
+ * @swagger
+ * /colleges/departments/{departmentId}/members:
+ *   get:
+ *     summary: Get department members
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: departmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of members
+ */
+router.get('/departments/:departmentId/members',
     authMiddleware.authenticate,
     paginationMiddleware,
     departmentController.getDepartmentMembers
 );
 
-router.post('/departments/:departmentId/members/:userId', 
+/**
+ * @swagger
+ * /colleges/departments/{departmentId}/members/{userId}:
+ *   post:
+ *     summary: Add member to department
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: departmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Member added
+ */
+router.post('/departments/:departmentId/members/:userId',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin', 'hod']),
     departmentController.addDepartmentMember
 );
 
-router.delete('/departments/:departmentId/members/:userId', 
+/**
+ * @swagger
+ * /colleges/departments/{departmentId}/members/{userId}:
+ *   delete:
+ *     summary: Remove member from department
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: departmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Member removed
+ */
+router.delete('/departments/:departmentId/members/:userId',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin', 'hod']),
     departmentController.removeDepartmentMember
 );
 
 // College Stats
-router.get('/colleges/:collegeId/stats', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}/stats:
+ *   get:
+ *     summary: Get college stats
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: College stats
+ */
+router.get('/colleges/:collegeId/stats',
     authMiddleware.authenticate,
     collegeController.getCollegeStats
 );
 
-router.get('/colleges/:collegeId/analytics', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}/analytics:
+ *   get:
+ *     summary: Get college analytics
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: College analytics
+ */
+router.get('/colleges/:collegeId/analytics',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin']),
     collegeController.getCollegeAnalytics
 );
 
 // College Settings
-router.get('/colleges/:collegeId/settings', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}/settings:
+ *   get:
+ *     summary: Get college settings
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: College settings
+ */
+router.get('/colleges/:collegeId/settings',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin']),
     collegeController.getCollegeSettings
 );
 
-router.put('/colleges/:collegeId/settings', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}/settings:
+ *   put:
+ *     summary: Update college settings
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Settings updated
+ */
+router.put('/colleges/:collegeId/settings',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin']),
     collegeController.updateCollegeSettings
 );
 
 // College Subscription
-router.get('/colleges/:collegeId/subscription', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}/subscription:
+ *   get:
+ *     summary: Get college subscription
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Subscription details
+ */
+router.get('/colleges/:collegeId/subscription',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin']),
     collegeController.getSubscription
 );
 
-router.post('/colleges/:collegeId/subscription/upgrade', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}/subscription/upgrade:
+ *   post:
+ *     summary: Upgrade subscription
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Subscription upgraded
+ */
+router.post('/colleges/:collegeId/subscription/upgrade',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin']),
     collegeController.upgradeSubscription
 );
 
-router.post('/colleges/:collegeId/subscription/cancel', 
+/**
+ * @swagger
+ * /college/colleges/{collegeId}/subscription/cancel:
+ *   post:
+ *     summary: Cancel subscription
+ *     tags: [Colleges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: collegeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Subscription cancelled
+ */
+router.post('/colleges/:collegeId/subscription/cancel',
     authMiddleware.authenticate,
     authMiddleware.authorize(['college_admin', 'admin']),
     collegeController.cancelSubscription

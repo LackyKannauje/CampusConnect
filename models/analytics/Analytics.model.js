@@ -241,26 +241,34 @@ analyticsSchema.methods.toDashboardJSON = function() {
 };
 
 // Static Methods
-analyticsSchema.statics.getTimeSeries = function(collegeId, metric, startDate, endDate, period = 'daily') {
+analyticsSchema.statics.getTimeSeries = function (
+    collegeId,
+    metric,
+    startDate,
+    endDate,
+    period = "daily"
+  ) {
     const matchStage = {
-        collegeId: mongoose.Types.ObjectId(collegeId),
-        timestamp: { $gte: startDate, $lte: endDate },
-        period: period
+      collegeId: mongoose.isValidObjectId(collegeId)
+        ? new mongoose.Types.ObjectId(collegeId)
+        : collegeId,   // fallback if it's already an ObjectId
+      timestamp: { $gte: startDate, $lte: endDate },
+      period
     };
-    
+  
     return this.aggregate([
-        { $match: matchStage },
-        { $sort: { timestamp: 1 } },
-        {
-            $project: {
-                timestamp: 1,
-                value: `$${metric}`,
-                _id: 0
-            }
+      { $match: matchStage },
+      { $sort: { timestamp: 1 } },
+      {
+        $project: {
+          timestamp: 1,
+          value: `$${metric}`,
+          _id: 0
         }
+      }
     ]);
-};
-
+  };
+  
 analyticsSchema.statics.getCollegeComparison = function(collegeIds, metric, period = 'monthly') {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);

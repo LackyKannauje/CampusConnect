@@ -117,8 +117,11 @@ class ContentModerator {
         if (cached) {
             return { ...cached, cached: true };
         }
-
+        console.log(cached);
+        
         const config = await AIConfig.getConfigForScope('college', collegeId);
+        console.log(config.features);
+
         if (!config || !config.features.smartTagging) {
             return { tags: [], skipped: true };
         }
@@ -128,9 +131,9 @@ class ContentModerator {
 
         try {
             await this.initializeProvider(provider, config.providers[provider]);
-
             let result;
             if (provider === 'openai') {
+
                 result = await this.providers.openai.generateTags(content, {
                     model,
                     maxTags,
@@ -143,7 +146,7 @@ class ContentModerator {
                     collegeId
                 });
             }
-
+console.log(result)
             if (result.success) {
                 const tags = result.data.tags || [];
                 
@@ -200,7 +203,6 @@ class ContentModerator {
                     collegeId
                 });
             }
-
             if (result.success) {
                 const summary = result.data.summary;
                 

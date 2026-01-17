@@ -88,12 +88,26 @@ const contentSchema = new mongoose.Schema({
         ref: 'Media' 
     },
     media: [{
-        mediaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Media' },
-        type: String,
-        url: String,
+        _id: false, // Don't create _id for subdocuments
+        mediaId: { 
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: 'Media',
+            required: true 
+        },
+        type: {
+            type: String,
+            required: true
+        },
+        url: {
+            type: String,
+            required: true
+        },
         thumbnail: String,
         caption: String,
-        order: Number
+        order: {
+            type: Number,
+            default: 0
+        }
     }],
     attachments: [{
         mediaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Media' },
@@ -540,7 +554,7 @@ contentSchema.index({ 'visibility.expiresAt': 1 });
 contentSchema.index({ title: 'text', 'content.text': 'text', 'content.markdown': 'text' });
 
 // Middleware
-contentSchema.pre('save', async function(next) {
+contentSchema.pre('save', async function() {
     // Generate contentId if not present
     if (!this.contentId) {
         const timestamp = Date.now().toString(36);
@@ -590,10 +604,9 @@ contentSchema.pre('save', async function(next) {
         this.excerpt = this.content.text.substring(0, 200) + '...';
     }
     
-    next();
 });
 
-contentSchema.pre('findOneAndUpdate', function(next) {
+contentSchema.pre('findOneAndUpdate', async function() {
     const update = this.getUpdate();
     
     // Update hot score if engagement changes
@@ -601,7 +614,6 @@ contentSchema.pre('findOneAndUpdate', function(next) {
         this.set({ 'engagement.hotScore': this.calculateHotScore() });
     }
     
-    next();
 });
 
 // Methods
@@ -672,45 +684,85 @@ contentSchema.methods.removeLike = function(userId) {
     return false;
 };
 
-contentSchema.methods.canUserAccess = function(user) {
-    // Check moderation status
-    if (this.moderation.status !== 'approved') {
-        return user._id.equals(this.authorId) || 
-               user.academic.role === 'admin' || 
-               user.academic.role === 'moderator';
+contentSchema.methods.canUserAccess = function (user) {
+    if (!user || !user._id) return false;
+  
+    const userId = user._id;
+    const userRole = user?.academic?.role;
+  
+    // IMPORTANT FIX: get college/department from academic
+    const userCollegeId = user?.academic?.collegeId?._id || user?.academic?.collegeId;
+    const userDeptId = user?.academic?.departmentId;
+  
+    const userBatch = user?.academic?.batch?.name;
+  
+    const isAuthor =
+      this.authorId && userId && this.authorId.equals(userId);
+  
+    const isAdmin =
+      userRole === "admin" || userRole === "moderator";
+  
+    // -------- 1) Moderation check --------
+    if (this.moderation?.status !== "approved") {
+      return isAuthor || isAdmin;
     }
-    
-    // Check expiration
-    if (this.visibility.expiresAt && new Date() > this.visibility.expiresAt) {
-        return user._id.equals(this.authorId) || 
-               user.academic.role === 'admin';
+  
+    // -------- 2) Expiration check --------
+    if (this.visibility?.expiresAt && new Date() > this.visibility.expiresAt) {
+      return isAuthor || userRole === "admin";
     }
-    
-    // Check visibility scope
-    switch (this.visibility.scope) {
-        case 'public':
-            return true;
-        case 'college':
-            return user.collegeId.equals(this.collegeId);
-        case 'department':
-            return user.collegeId.equals(this.collegeId) && 
-                   user.departmentId && 
-                   user.departmentId.equals(this.departmentId);
-        case 'batch':
-            return user.collegeId.equals(this.collegeId) && 
-                   this.visibility.targetGroups?.batches?.includes(user.academic.batch?.name);
-        case 'private':
-            return user._id.equals(this.authorId) ||
-                   this.visibility.targetGroups?.specificUsers?.some(id => id.equals(user._id));
-        case 'followers':
-            // Check if user follows author
-            // This would require additional logic
-            return user._id.equals(this.authorId);
-        default:
-            return false;
+  
+    const scope = this.visibility?.scope;
+  
+    switch (scope) {
+      case "public":
+        return true;
+  
+      case "college":
+        return Boolean(
+          userCollegeId &&
+            this.collegeId &&
+            userCollegeId.equals(this.collegeId)
+        );
+  
+      case "department":
+        return Boolean(
+          userCollegeId &&
+            this.collegeId &&
+            userDeptId &&
+            this.departmentId &&
+            userCollegeId.equals(this.collegeId) &&
+            userDeptId.equals(this.departmentId)
+        );
+  
+      case "batch":
+        return Boolean(
+          userCollegeId &&
+          this.collegeId &&
+          userCollegeId.equals(this.collegeId) &&
+          Array.isArray(this.visibility?.targetGroups?.batches) &&
+          userBatch &&
+          this.visibility.targetGroups.batches.includes(userBatch)
+        );
+  
+      case "private":
+        return Boolean(
+          isAuthor ||
+            (Array.isArray(this.visibility?.targetGroups?.specificUsers) &&
+              this.visibility.targetGroups.specificUsers.some(
+                id => id && id.equals && id.equals(userId)
+              ))
+        );
+  
+      case "followers":
+        return isAuthor; // you’ll implement real follow logic later
+  
+      default:
+        return false;
     }
-};
-
+  };
+  
+  
 contentSchema.methods.getRelatedContent = async function(limit = 10) {
     return this.constructor.aggregate([
         {

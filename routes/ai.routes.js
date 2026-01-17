@@ -6,124 +6,503 @@ const authMiddleware = require('../middleware/auth.middleware');
 const rateLimitMiddleware = require('../middleware/rateLimit.middleware');
 
 // AI Content Processing
-router.post('/moderate', 
+/**
+ * @swagger
+ * /ai/moderate:
+ *   post:
+ *     summary: Moderate content
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Moderation result
+ */
+router.post('/moderate',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 30 }), // 30 requests per minute
     aiController.moderateContent
 );
 
-router.post('/tag', 
+/**
+ * @swagger
+ * /ai/tag:
+ *   post:
+ *     summary: Generate tags
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Generated tags
+ */
+router.post('/tag',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 50 }),
     aiController.generateTags
 );
 
-router.post('/summarize', 
+/**
+ * @swagger
+ * /ai/summarize:
+ *   post:
+ *     summary: Summarize content
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Summary generated
+ */
+router.post('/summarize',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 40 }),
     aiController.summarizeContent
 );
 
-router.post('/embedding', 
+/**
+ * @swagger
+ * /ai/embedding:
+ *   post:
+ *     summary: Generate embedding
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Embedding generated
+ */
+router.post('/embedding',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 20 }),
     aiController.generateEmbedding
 );
 
 // AI Search
-router.post('/search/semantic', 
+/**
+ * @swagger
+ * /ai/search/semantic:
+ *   post:
+ *     summary: Semantic search
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - query
+ *             properties:
+ *               query:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Search results
+ */
+router.post('/search/semantic',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 30 }),
     aiController.semanticSearch
 );
 
-router.get('/search/suggest', 
+/**
+ * @swagger
+ * /ai/search/suggest:
+ *   get:
+ *     summary: Get search suggestions
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Search suggestions
+ */
+router.get('/search/suggest',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 60 }),
     aiController.getSuggestions
 );
 
 // AI Chat/Assistant
-router.post('/chat', 
+/**
+ * @swagger
+ * /ai/chat:
+ *   post:
+ *     summary: Chat with AI
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - message
+ *             properties:
+ *               message:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: AI response
+ */
+router.post('/chat',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 20 }),
     aiController.chat
 );
 
-router.post('/study-assistant', 
+/**
+ * @swagger
+ * /ai/study-assistant:
+ *   post:
+ *     summary: Study assistant
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - topic
+ *             properties:
+ *               topic:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Study materials
+ */
+router.post('/study-assistant',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 15 }),
     aiController.studyAssistant
 );
 
-router.post('/code-help', 
+/**
+ * @swagger
+ * /ai/code-help:
+ *   post:
+ *     summary: Code helper
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *             properties:
+ *               code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Code help
+ */
+router.post('/code-help',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 10 }),
     aiController.codeHelp
 );
 
 // AI Recommendations
-router.get('/recommendations/content', 
+/**
+ * @swagger
+ * /ai/recommendations/content:
+ *   get:
+ *     summary: Content recommendations
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Content recommendations
+ */
+router.get('/recommendations/content',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 20 }),
     aiController.getContentRecommendations
 );
 
-router.get('/recommendations/users', 
+/**
+ * @swagger
+ * /ai/recommendations/users:
+ *   get:
+ *     summary: User recommendations
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User recommendations
+ */
+router.get('/recommendations/users',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 20 }),
     aiController.getUserRecommendations
 );
 
-router.get('/recommendations/study', 
+/**
+ * @swagger
+ * /ai/recommendations/study:
+ *   get:
+ *     summary: Study recommendations
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Study recommendations
+ */
+router.get('/recommendations/study',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 15 }),
     aiController.getStudyRecommendations
 );
 
 // AI Configuration (Admin only)
-router.get('/config', 
+/**
+ * @swagger
+ * /ai/config:
+ *   get:
+ *     summary: Get AI config
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: AI configuration
+ */
+router.get('/config',
     authMiddleware.authenticate,
     authMiddleware.authorize(['admin', 'college_admin']),
     aiController.getAIConfig
 );
 
-router.put('/config', 
+/**
+ * @swagger
+ * /ai/config:
+ *   put:
+ *     summary: Update AI config
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Config updated
+ */
+router.put('/config',
     authMiddleware.authenticate,
     authMiddleware.authorize(['admin', 'college_admin']),
     aiController.updateAIConfig
 );
 
 // AI Usage Analytics
-router.get('/usage', 
+/**
+ * @swagger
+ * /ai/usage:
+ *   get:
+ *     summary: Get AI usage stats
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Usage stats
+ */
+router.get('/usage',
     authMiddleware.authenticate,
     authMiddleware.authorize(['admin', 'college_admin']),
     aiController.getAIUsage
 );
 
-router.get('/usage/cost', 
+/**
+ * @swagger
+ * /ai/usage/cost:
+ *   get:
+ *     summary: Get AI cost metrics
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cost metrics
+ */
+router.get('/usage/cost',
     authMiddleware.authenticate,
     authMiddleware.authorize(['admin', 'college_admin']),
     aiController.getAICost
 );
 
-router.get('/usage/top-users', 
+/**
+ * @swagger
+ * /ai/usage/top-users:
+ *   get:
+ *     summary: Get top AI users
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Top users list
+ */
+router.get('/usage/top-users',
     authMiddleware.authenticate,
     authMiddleware.authorize(['admin', 'college_admin']),
     aiController.getTopAIUsers
 );
 
 // AI Feedback
-router.post('/feedback/:requestId', 
+/**
+ * @swagger
+ * /ai/feedback/{requestId}:
+ *   post:
+ *     summary: Submit feedback
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rating
+ *             properties:
+ *               rating:
+ *                 type: integer
+ *               comment:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Feedback submitted
+ */
+router.post('/feedback/:requestId',
     authMiddleware.authenticate,
     aiController.submitFeedback
 );
 
 // AI Health Check
-router.get('/health', 
+/**
+ * @swagger
+ * /ai/health:
+ *   get:
+ *     summary: AI service health
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Service health
+ */
+router.get('/health',
     authMiddleware.authenticate,
     authMiddleware.authorize(['admin']),
     aiController.getAIHealth
+);
+
+// Add these routes after existing ones
+
+// AI Config Management
+router.post('/config/create', 
+    authMiddleware.authenticate,
+    authMiddleware.authorize(['super_admin']),
+    aiController.createAIConfig
+);
+
+router.get('/config/:scope/:scopeId', 
+    authMiddleware.authenticate,
+    authMiddleware.authorize(['admin', 'college_admin']),
+    aiController.getSpecificConfig
+);
+
+// AI Interaction Management
+router.post('/interaction/create', 
+    authMiddleware.authenticate,
+    rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 100 }),
+    aiController.createInteraction
+);
+
+router.get('/interaction/:requestId', 
+    authMiddleware.authenticate,
+    aiController.getInteraction
+);
+
+router.post('/interaction/:requestId/update', 
+    authMiddleware.authenticate,
+    aiController.updateInteraction
 );
 
 module.exports = router;

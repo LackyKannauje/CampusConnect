@@ -111,12 +111,14 @@ const mediaSchema = new mongoose.Schema({
         progress: Number, // 0-100
         error: String,
         processedAt: Date,
-        transformations: [{
-            type: String, // 'thumbnail', 'compressed', 'watermarked'
-            url: String,
-            size: Number,
-            createdAt: Date
-        }],
+        transformations: [
+            {
+              type: { type: String },   // 👈 IMPORTANT CHANGE
+              url: { type: String },
+              size: { type: Number },
+              createdAt: { type: Date, default: Date.now }
+            }
+          ],          
         optimizationLevel: Number // 0-100
     },
     
@@ -317,11 +319,18 @@ mediaSchema.virtual('downloadUrl').get(function() {
     return this.permissions.downloadable ? this.file.url : null;
 });
 
-mediaSchema.virtual('thumbnailUrl').get(function() {
-    return this.file.thumbnail || 
-           this.processing.transformations?.find(t => t.type === 'thumbnail')?.url ||
-           this.file.url;
-});
+mediaSchema.virtual('thumbnailUrl').get(function () {
+    if (this.file?.thumbnail) return this.file.thumbnail;
+  
+    const thumb = this.processing?.transformations?.find(
+      t => t && t.type === 'thumbnail'
+    );
+  
+    if (thumb?.url) return thumb.url;
+  
+    return this.file?.url || null;
+  });
+  
 
 mediaSchema.virtual('isProcessed').get(function() {
     return this.processing.status === 'ready';
@@ -333,7 +342,7 @@ mediaSchema.virtual('isSafe').get(function() {
 });
 
 mediaSchema.virtual('sizeInMB').get(function() {
-    return (this.file.size / (1024 * 1024)).toFixed(2);
+    return (this.file?.size / (1024 * 1024)).toFixed(2);
 });
 
 mediaSchema.virtual('durationFormatted').get(function() {
@@ -355,7 +364,7 @@ mediaSchema.index({ 'usage.views': -1 });
 mediaSchema.index({ 'ai.embeddings.image': 'cosmosSearch' }); // For vector search
 
 // Middleware
-mediaSchema.pre('save', function(next) {
+mediaSchema.pre('save', async function() {
     // Generate mediaId if not present
     if (!this.mediaId) {
         const timestamp = Date.now().toString(36);
@@ -382,7 +391,6 @@ mediaSchema.pre('save', function(next) {
         this.type = typeMap[ext] || 'other';
     }
     
-    next();
 });
 
 // Methods

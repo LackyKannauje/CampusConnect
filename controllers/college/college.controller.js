@@ -87,7 +87,7 @@ const collegeController = {
         const { name, code, emailDomain } = req.body;
         const files = req.files;
         const admin = req.user;
-
+        console.log(name, code, emailDomain, files, admin);
         // Check if college code already exists
         const existingCollege = await College.findOne({ code: code.toUpperCase() });
         if (existingCollege) {
@@ -105,6 +105,7 @@ const collegeController = {
             });
             logo = {
                 url: result.secure_url,
+                type: result.resource_type,
                 thumbnail: cloudinary.url(result.public_id, {
                     width: 100,
                     height: 100,
@@ -123,7 +124,8 @@ const collegeController = {
                 crop: 'fill'
             });
             banner = {
-                url: result.secure_url
+                url: result.secure_url,
+                type: result.resource_type,
             };
         }
 

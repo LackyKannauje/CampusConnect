@@ -53,15 +53,13 @@ const AIEnrichedSchema = {
 };
 
 const TimestampsPlugin = (schema) => {
-    schema.pre('save', function(next) {
+    schema.pre('save', async function () {
         this.updatedAt = Date.now();
-        next();
-    });
-    
-    schema.pre('findOneAndUpdate', function(next) {
+      });
+      
+      schema.pre('findOneAndUpdate', async function () {
         this.set({ updatedAt: Date.now() });
-        next();
-    });
+      });      
 };
 
 module.exports = { BaseSchema, AIEnrichedSchema, TimestampsPlugin };

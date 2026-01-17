@@ -447,7 +447,7 @@ userSchema.index({ 'stats.activity.lastActive': -1 });
 userSchema.index({ 'moderation.isSuspended': 1, 'moderation.isBanned': 1 });
 
 // Middleware
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function() {
     // Update display name if not set
     if (!this.profile.displayName) {
         this.profile.displayName = this.profile.fullName;
@@ -467,14 +467,12 @@ userSchema.pre('save', async function(next) {
         this.academic.batch.name = `${this.academic.startYear}-${this.academic.endYear}`;
     }
     
-    next();
 });
 
-userSchema.pre('save', function(next) {
+userSchema.pre('save', async function() {
     if (this.isModified('auth.passwordHash')) {
         this.auth.lastPasswordChange = new Date();
     }
-    next();
 });
 
 // Methods

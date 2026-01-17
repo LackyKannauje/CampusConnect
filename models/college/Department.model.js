@@ -219,7 +219,7 @@ departmentSchema.index({ 'placement.averagePackage': -1 });
 departmentSchema.index({ 'stats.studentCount': -1 });
 
 // Middleware
-departmentSchema.pre('save', function(next) {
+departmentSchema.pre('save', async function() {
     // Update stats
     this.stats.facultyCount = this.faculty.filter(f => f.isActive).length;
     this.stats.studentCount = this.students.current.count;
@@ -235,7 +235,6 @@ departmentSchema.pre('save', function(next) {
         this.stats.lastUpdated = new Date();
     }
     
-    next();
 });
 
 departmentSchema.post('save', async function() {

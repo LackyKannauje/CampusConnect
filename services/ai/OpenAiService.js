@@ -1,5 +1,6 @@
 const axios = require('axios');
 const AIInteraction = require('../../models/ai/AIInteraction.model');
+require('dotenv').config();
 
 class OpenAIService {
     constructor(config) {
@@ -7,7 +8,7 @@ class OpenAIService {
         this.client = axios.create({
             baseURL: config.baseURL || 'https://api.openai.com/v1',
             headers: {
-                'Authorization': `Bearer ${config.apiKey}`,
+                'Authorization': `Bearer ${config.apiKey || process.env.OPENAI_API_KEY}`,
                 'Content-Type': 'application/json'
             },
             timeout: config.timeout || 30000
@@ -86,7 +87,12 @@ class OpenAIService {
         }
     }
 
+
+
     async generateTags(text, options = {}) {
+    console.log('generateTags called with text length:', text.length);
+    
+    try {
         const requestId = `tag_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
         const aiInteraction = new AIInteraction({
@@ -100,66 +106,60 @@ class OpenAIService {
                 size: text.length,
                 tokenCount: this.estimateTokens(text)
             },
-            collegeId: options.collegeId
+            collegeId: options.collegeId,
+            metrics: {
+                latency: { total: 0, network: 0, processing: 0 },
+                tokens: { input: 0, output: 0, total: 0 },
+                cost: { amount: 0, currency: 'USD', modelCost: 0, apiCost: 0 },
+                cacheHit: false,
+                retryCount: 0
+            }
         });
 
-        try {
-            await aiInteraction.markProcessing().save();
+        aiInteraction.status = 'processing';
+        await aiInteraction.save();
 
-            const prompt = `Extract relevant tags from the following text. Return only a JSON array of tags: ${text}`;
-            
+        const prompt = `Extract relevant tags from the following text. Return only a JSON array of tags: ${text}`;
+        
+        console.log('Making OpenAI API request...');
+        console.log('Prompt length:', prompt.length);
+        
+        const startTime = Date.now();
+        
+        try {
             const response = await this.client.post('/chat/completions', {
                 model: options.model || 'gpt-3.5-turbo',
                 messages: [{ role: 'user', content: prompt }],
                 max_tokens: 100,
                 temperature: 0.3
             });
-
-            const content = response.data.choices[0].message.content;
-            let tags = [];
             
-            try {
-                tags = JSON.parse(content);
-                if (!Array.isArray(tags)) tags = [tags];
-            } catch {
-                tags = content.split(',').map(tag => tag.trim().toLowerCase());
-            }
-
-            const output = {
-                tags: tags.slice(0, options.maxTags || 5),
-                confidence: 0.9
-            };
-
-            aiInteraction.markCompleted(output, {
-                latency: { total: response.duration || 0 },
-                tokens: {
-                    input: response.data.usage.prompt_tokens,
-                    output: response.data.usage.completion_tokens,
-                    total: response.data.usage.total_tokens
+            const endTime = Date.now();
+            console.log('OpenAI response status:', response.status);
+            console.log('OpenAI response data:', response.data);
+            
+            // ... rest of your code ...
+            
+        } catch (apiError) {
+            console.error('OpenAI API error details:', {
+                status: apiError.response?.status,
+                statusText: apiError.response?.statusText,
+                data: apiError.response?.data,
+                message: apiError.message,
+                config: {
+                    url: apiError.config?.url,
+                    method: apiError.config?.method,
+                    headers: apiError.config?.headers
                 }
             });
-
-            await aiInteraction.save();
-            await aiInteraction.calculateCost();
-
-            return {
-                success: true,
-                data: output,
-                requestId
-            };
-
-        } catch (error) {
-            aiInteraction.markFailed({
-                code: error.response?.status || 500,
-                message: error.message,
-                details: error.response?.data
-            });
-
-            await aiInteraction.save();
-            throw new Error(`OpenAI tagging failed: ${error.message}`);
+            throw apiError;
         }
-    }
 
+    } catch (error) {
+        console.error('Full generateTags error:', error);
+        throw new Error(`OpenAI tagging failed: ${error.message}`);
+    }
+}
     async generateSummary(text, options = {}) {
         const requestId = `sum_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
@@ -293,7 +293,6 @@ class OpenAIService {
 
     // Helper Methods
     estimateTokens(text) {
-        // Rough estimation: 1 token ≈ 4 characters for English
         return Math.ceil(text.length / 4);
     }
 

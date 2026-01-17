@@ -128,7 +128,7 @@ invitationSchema.index({ invitedBy: 1, createdAt: -1 });
 invitationSchema.index({ status: 1, expiresAt: 1 });
 
 // Middleware
-invitationSchema.pre('save', function(next) {
+invitationSchema.pre('save',async function() {
     // Generate token if not present
     if (!this.token) {
         this.token = crypto.randomBytes(32).toString('hex');
@@ -145,7 +145,6 @@ invitationSchema.pre('save', function(next) {
         this.tracking.sentAt = new Date();
     }
     
-    next();
 });
 
 // Virtual Fields

@@ -4,6 +4,9 @@ const AIInteraction = require('../../models/ai/AIInteraction.model');
 const Embedding = require('../../models/ai/Embedding.model');
 const Content = require('../../models/content/Content.model');
 const errorMiddleware  = require('../../middleware/error.middleware');
+const User = require('../../models/user/User.model');
+const College = require('../../models/college/College.model');
+const Department = require('../../models/college/Department.model');
 
 const contentModerator = new ContentModerator();
 
@@ -560,6 +563,281 @@ const aiController = {
         };
 
         res.json(health);
+    }),
+
+    // Create AI config (super admin only)
+        createAIConfig: errorMiddleware.catchAsync(async (req, res) => {
+        const { scope, scopeId, config } = req.body;
+        const user = req.user;
+
+        // Validate scope
+        const validScopes = ['global', 'college', 'department', 'user'];
+        if (!validScopes.includes(scope)) {
+            return res.status(400).json({ 
+                error: 'Invalid scope. Must be: global, college, department, or user' 
+            });
+        }
+
+        // Check if config already exists
+        const existingConfig = await AIConfig.findOne({ scope, scopeId });
+        if (existingConfig) {
+            return res.status(400).json({ error: 'AI config already exists for this scope' });
+        }
+
+        // Validate scopeId based on scope
+        if (scope === 'college' && scopeId) {
+            const college = await College.findById(scopeId);
+            if (!college) {
+                return res.status(404).json({ error: 'College not found' });
+            }
+        }
+
+        if (scope === 'department' && scopeId) {
+            const department = await Department.findById(scopeId);
+            if (!department) {
+                return res.status(404).json({ error: 'Department not found' });
+            }
+        }
+
+        if (scope === 'user' && scopeId) {
+            const user = await User.findById(scopeId);
+            if (!user) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+        }
+
+        // Create new config
+        const aiConfig = new AIConfig({
+            scope,
+            scopeId: scope === 'global' ? undefined : scopeId,
+            ...config
+        });
+
+        await aiConfig.save();
+
+        // Remove sensitive data from response
+        const responseConfig = aiConfig.toObject();
+        Object.keys(responseConfig.providers).forEach(provider => {
+            delete responseConfig.providers[provider].apiKey;
+        });
+
+        res.status(201).json({
+            message: 'AI configuration created successfully',
+            config: responseConfig
+        });
+    }),
+
+    // Get specific config by scope
+    getSpecificConfig: errorMiddleware.catchAsync(async (req, res) => {
+        const { scope, scopeId } = req.params;
+        const user = req.user;
+
+        // Validate access permissions
+        if (scope === 'college' && scopeId) {
+            // User must belong to the college
+            if (!user.academic.collegeId.equals(scopeId) && user.academic.role !== 'super_admin') {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+        }
+
+        if (scope === 'department' && scopeId) {
+            const department = await Department.findById(scopeId);
+            if (!department) {
+                return res.status(404).json({ error: 'Department not found' });
+            }
+            
+            // User must belong to the department's college
+            if (!user.academic.collegeId.equals(department.collegeId) && 
+                user.academic.role !== 'super_admin') {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+        }
+
+        if (scope === 'user' && scopeId) {
+            // Users can only view their own config or super admin
+            if (!user._id.equals(scopeId) && user.academic.role !== 'super_admin') {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+        }
+
+        const config = await AIConfig.findOne({ scope, scopeId: scope === 'global' ? undefined : scopeId });
+
+        if (!config) {
+            return res.status(404).json({ error: 'AI configuration not found' });
+        }
+
+        // Remove sensitive data from response
+        const safeConfig = config.toObject();
+        Object.keys(safeConfig.providers).forEach(provider => {
+            delete safeConfig.providers[provider].apiKey;
+        });
+
+        res.json(safeConfig);
+    }),
+
+    // Create AI interaction (for manual tracking)
+    createInteraction: errorMiddleware.catchAsync(async (req, res) => {
+        const { 
+            service, 
+            model, 
+            endpoint, 
+            input, 
+            context,
+            metadata = {} 
+        } = req.body;
+        const user = req.user;
+
+        // Validate required fields
+        if (!service || !model || !endpoint || !input) {
+            return res.status(400).json({ 
+                error: 'service, model, endpoint, and input are required' 
+            });
+        }
+
+        const validServices = ['openai', 'gemini', 'huggingface', 'azure', 'custom'];
+        if (!validServices.includes(service)) {
+            return res.status(400).json({ 
+                error: `Invalid service. Must be one of: ${validServices.join(', ')}` 
+            });
+        }
+
+        const validEndpoints = [
+            'moderation', 'tagging', 'summarization', 'sentiment',
+            'translation', 'transcription', 'ocr', 'embeddings',
+            'chat', 'image_generation', 'code_generation', 'qna',
+            'custom'
+        ];
+        
+        if (!validEndpoints.includes(endpoint)) {
+            return res.status(400).json({ 
+                error: `Invalid endpoint. Must be one of: ${validEndpoints.join(', ')}` 
+            });
+        }
+
+        // Check rate limits
+        const recentCalls = await AIInteraction.countDocuments({
+            userId: user._id,
+            collegeId: user.academic.collegeId,
+            createdAt: { $gte: new Date(Date.now() - 60 * 1000) } // Last minute
+        });
+
+        if (recentCalls >= 100) {
+            return res.status(429).json({ error: 'Rate limit exceeded. Please wait.' });
+        }
+
+        // Create interaction
+        const interaction = new AIInteraction({
+            requestId: `${endpoint}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            userId: user._id,
+            collegeId: user.academic.collegeId,
+            service,
+            model,
+            endpoint,
+            input,
+            inputMetadata: {
+                contentType: typeof input === 'string' ? 'text' : 'json',
+                size: JSON.stringify(input).length,
+                tokenCount: estimateTokens(JSON.stringify(input))
+            },
+            context: {
+                source: 'manual_api',
+                ...context
+            },
+            status: 'pending',
+            metadata
+        });
+
+        await interaction.save();
+
+        res.status(201).json({
+            message: 'AI interaction created successfully',
+            interaction: {
+                requestId: interaction.requestId,
+                status: interaction.status,
+                createdAt: interaction.createdAt
+            }
+        });
+    }),
+
+    // Get interaction by request ID
+    getInteraction: errorMiddleware.catchAsync(async (req, res) => {
+        const { requestId } = req.params;
+        const user = req.user;
+
+        const interaction = await AIInteraction.findOne({
+            requestId,
+            userId: user._id // Users can only view their own interactions
+        });
+
+        if (!interaction) {
+            return res.status(404).json({ error: 'Interaction not found' });
+        }
+
+        res.json({
+            interaction: {
+                requestId: interaction.requestId,
+                service: interaction.service,
+                model: interaction.model,
+                endpoint: interaction.endpoint,
+                input: interaction.input,
+                output: interaction.output,
+                status: interaction.status,
+                metrics: interaction.metrics,
+                quality: interaction.quality,
+                feedback: interaction.feedback,
+                createdAt: interaction.createdAt,
+                updatedAt: interaction.updatedAt
+            }
+        });
+    }),
+
+    // Update interaction (for async processing)
+    updateInteraction: errorMiddleware.catchAsync(async (req, res) => {
+        const { requestId } = req.params;
+        const { output, status, metrics, error } = req.body;
+        const user = req.user;
+
+        const interaction = await AIInteraction.findOne({
+            requestId,
+            userId: user._id
+        });
+
+        if (!interaction) {
+            return res.status(404).json({ error: 'Interaction not found' });
+        }
+
+        // Check if interaction can be updated
+        if (interaction.status === 'completed' || interaction.status === 'failed') {
+            return res.status(400).json({ error: 'Cannot update completed or failed interaction' });
+        }
+
+        // Update fields
+        if (output !== undefined) interaction.output = output;
+        if (status) interaction.status = status;
+        if (metrics) interaction.metrics = { ...interaction.metrics, ...metrics };
+        if (error) interaction.error = error;
+
+        // Auto-calculate cost if not provided
+        if (!interaction.metrics.cost && interaction.metrics.tokens) {
+            interaction.calculateCost();
+        }
+
+        // Update quality score if output is provided
+        if (output && !interaction.quality.confidence) {
+            interaction.quality.confidence = 0.8; // Default confidence
+        }
+
+        interaction.updatedAt = new Date();
+        await interaction.save();
+
+        res.json({
+            message: 'Interaction updated successfully',
+            interaction: {
+                requestId: interaction.requestId,
+                status: interaction.status,
+                updatedAt: interaction.updatedAt
+            }
+        });
     })
 };
 

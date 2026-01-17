@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
+
 // Import all route files
 const authRoutes = require('./auth.routes');
 const userRoutes = require('./user.routes');
@@ -16,7 +17,7 @@ const API_PREFIX = '/api/v1';
 router.use(`${API_PREFIX}/auth`, authRoutes);
 router.use(`${API_PREFIX}/users`, userRoutes);
 router.use(`${API_PREFIX}/content`, contentRoutes);
-router.use(`${API_PREFIX}/colleges`, collegeRoutes);
+router.use(`${API_PREFIX}/college`, collegeRoutes);
 router.use(`${API_PREFIX}/ai`, aiRoutes);
 router.use(`${API_PREFIX}/analytics`, analyticsRoutes);
 
@@ -28,8 +29,8 @@ router.get(`${API_PREFIX}/health`, (req, res) => {
         version: '1.0.0'
     });
 });
-
 // 404 handler for API routes
+
 router.use(API_PREFIX, (req, res) => {
     res.status(404).json({
         error: 'API endpoint not found',

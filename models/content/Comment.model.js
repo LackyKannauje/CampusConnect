@@ -252,7 +252,7 @@ commentSchema.index({ 'hashtags.tag': 1 });
 commentSchema.index({ 'ai.tags': 1 });
 
 // Middleware
-commentSchema.pre('save', function(next) {
+commentSchema.pre('save', async function() {
     // Set depth based on parent
     if (this.parentCommentId && this.depth === 0) {
         this.depth = 1;
@@ -300,10 +300,9 @@ commentSchema.pre('save', function(next) {
         this.extractMetadata();
     }
     
-    next();
 });
 
-commentSchema.pre('findOneAndUpdate', function(next) {
+commentSchema.pre('findOneAndUpdate', async function() {
     const update = this.getUpdate();
     
     if (update.text) {
@@ -322,7 +321,6 @@ commentSchema.pre('findOneAndUpdate', function(next) {
         });
     }
     
-    next();
 });
 
 // Methods

@@ -180,27 +180,128 @@ aiInteractionSchema.virtual('responseTime').get(function() {
 });
 
 // Methods
+// aiInteractionSchema.methods.markProcessing = function() {
+//     if (this.status === 'pending') {
+//         this.status = 'processing';
+//         return true;
+//     }
+//     return false;
+// };
+// In your AIInteraction model, update markProcessing:
 aiInteractionSchema.methods.markProcessing = function() {
     if (this.status === 'pending') {
         this.status = 'processing';
-        return true;
     }
-    return false;
+    return this; // Return the document instance
 };
 
-aiInteractionSchema.methods.markCompleted = function(output, metrics) {
-    this.status = 'completed';
-    this.output = output;
-    this.metrics = { ...this.metrics, ...metrics };
-    return this;
-};
-
+// Also update markFailed to return this:
 aiInteractionSchema.methods.markFailed = function(error, metrics = {}) {
     this.status = 'failed';
     this.error = error;
-    this.metrics = { ...this.metrics, ...metrics };
+    
+    // Initialize metrics if not present
+    if (!this.metrics) {
+        this.metrics = {
+            latency: { total: 0, network: 0, processing: 0 },
+            tokens: { input: 0, output: 0, total: 0 },
+            cost: { amount: 0, currency: 'USD', modelCost: 0, apiCost: 0 },
+            cacheHit: false,
+            retryCount: 0
+        };
+    }
+    
+    if (metrics.latency) {
+        this.metrics.latency = { ...this.metrics.latency, ...metrics.latency };
+    }
+    
+    return this; // Return the document instance
+};
+
+// // Add this method to your AIInteraction model
+// aiInteractionSchema.methods.setMetrics = function(metrics = {}) {
+//     // Ensure the metrics object has all required fields
+//     this.metrics = {
+//         latency: {
+//             total: metrics.latency?.total || 0,
+//             network: metrics.latency?.network || metrics.latency?.total || 0,
+//             processing: metrics.latency?.processing || 0
+//         },
+//         tokens: {
+//             input: metrics.tokens?.input || 0,
+//             output: metrics.tokens?.output || 0,
+//             total: metrics.tokens?.total || 
+//                   (metrics.tokens?.input || 0) + (metrics.tokens?.output || 0)
+//         },
+//         cost: {
+//             amount: metrics.cost?.amount || 0,
+//             currency: metrics.cost?.currency || 'USD',
+//             modelCost: metrics.cost?.modelCost || 0,
+//             apiCost: metrics.cost?.apiCost || 0
+//         },
+//         cacheHit: metrics.cacheHit || false,
+//         retryCount: metrics.retryCount || 0
+//     };
+    
+//     return this;
+// };
+
+// // Then update markCompleted to use it
+// aiInteractionSchema.methods.markCompleted = function(output, metrics = {}) {
+//     this.status = 'completed';
+//     this.output = output;
+//     this.setMetrics(metrics);
+//     return this;
+// };
+
+aiInteractionSchema.methods.markCompleted = function(output, metrics = {}) {
+    this.status = 'completed';
+    this.output = output;
+    
+    // Initialize with default values if not present
+    if (!this.metrics) {
+        this.metrics = {};
+    }
+    
+    // Set latency with defaults
+    this.metrics.latency = {
+        total: metrics.latency?.total || 0,
+        network: metrics.latency?.network || 0,
+        processing: metrics.latency?.processing || 0
+    };
+    
+    // Set tokens with defaults
+    this.metrics.tokens = {
+        input: metrics.tokens?.input || 0,
+        output: metrics.tokens?.output || 0,
+        total: metrics.tokens?.total || 0
+    };
+    
+    // Set cost with defaults
+    this.metrics.cost = {
+        amount: metrics.cost?.amount || 0,
+        currency: metrics.cost?.currency || 'USD',
+        modelCost: metrics.cost?.modelCost || 0,
+        apiCost: metrics.cost?.apiCost || 0
+    };
+    
+    // Set other metrics fields
+    if (metrics.cacheHit !== undefined) {
+        this.metrics.cacheHit = metrics.cacheHit;
+    }
+    if (metrics.retryCount !== undefined) {
+        this.metrics.retryCount = metrics.retryCount;
+    }
+    
     return this;
 };
+
+// aiInteractionSchema.methods.markFailed = function(error, metrics = {}) {
+//     this.status = 'failed';
+//     this.error = error;
+//     this.metrics = { ...this.metrics, ...metrics };
+//     return this;
+// };
 
 aiInteractionSchema.methods.markCached = function(cacheKey) {
     this.status = 'cached';
@@ -239,7 +340,7 @@ aiInteractionSchema.statics.getUsageStats = function(collegeId, startDate, endDa
     return this.aggregate([
         {
             $match: {
-                collegeId: mongoose.Types.ObjectId(collegeId),
+                collegeId: new mongoose.Types.ObjectId(collegeId),
                 createdAt: { $gte: startDate, $lte: endDate },
                 status: { $in: ['completed', 'cached'] }
             }
@@ -296,7 +397,7 @@ aiInteractionSchema.statics.getCostAnalysis = function(collegeId, period = 'mont
     return this.aggregate([
         {
             $match: {
-                collegeId: mongoose.Types.ObjectId(collegeId),
+                collegeId: new mongoose.Types.ObjectId(collegeId),
                 'metrics.cost.amount': { $gt: 0 }
             }
         },
@@ -345,7 +446,7 @@ aiInteractionSchema.statics.getTopUsers = function(collegeId, limit = 10) {
     return this.aggregate([
         {
             $match: {
-                collegeId: mongoose.Types.ObjectId(collegeId),
+                collegeId: new mongoose.Types.ObjectId(collegeId),
                 userId: { $exists: true }
             }
         },

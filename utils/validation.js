@@ -49,7 +49,6 @@ const Validation = {
     comment: {
         create: Joi.object({
             text: Joi.string().min(1).max(2000).required(),
-            contentId: Joi.string().required(),
             parentCommentId: Joi.string().allow(null)
         })
     },
@@ -115,6 +114,8 @@ const Validation = {
                 abortEarly: false,
                 stripUnknown: true
             });
+
+            console.log(req.body);
 
             if (error) {
                 const errors = error.details.map(detail => ({

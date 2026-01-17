@@ -80,6 +80,7 @@ const authController = {
 
         // Check password
         const isValidPassword = await user.verifyPassword(password);
+        console.log(isValidPassword);
         if (!isValidPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
@@ -94,10 +95,8 @@ const authController = {
         user.stats.activity.loginCount += 1;
         user.incrementStreak();
         await user.save();
-
         // Generate tokens
         const { accessToken, refreshToken, session } = await generateTokens(user);
-
         res.json({
             message: 'Login successful',
             user: {
@@ -331,24 +330,14 @@ const authController = {
 
 // Helper function to generate tokens
 async function generateTokens(user) {
-    // Create session
-    const session = new UserSession({
-        userId: user._id,
-        sessionId: crypto.randomBytes(32).toString('hex'),
-        device: {
-            type: 'web',
-            browser: 'unknown'
-        },
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-    });
-
-    await session.save();
-
-    // Generate tokens
+    // First generate session ID
+    const sessionId = crypto.randomBytes(32).toString('hex');
+    
+    // Generate tokens WITH sessionId
     const accessToken = jwt.sign(
         {
             userId: user._id,
-            sessionId: session.sessionId,
+            sessionId: sessionId, // Use the generated sessionId
             role: user.academic.role
         },
         process.env.JWT_SECRET,
@@ -358,11 +347,30 @@ async function generateTokens(user) {
     const refreshToken = jwt.sign(
         {
             userId: user._id,
-            sessionId: session.sessionId
+            sessionId: sessionId // Use the same sessionId
         },
         process.env.JWT_SECRET,
         { expiresIn: '30d' }
     );
+
+    // Create session AFTER token generation
+    const session = new UserSession({
+        userId: user._id,
+        sessionId: sessionId, // Same ID used in tokens
+        token: accessToken, // Store the access token
+        refreshToken: refreshToken, // Store refresh token
+        device: {
+            type: 'web',
+            browser: 'unknown'
+        },
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        activity: {
+            lastActive: new Date(),
+            totalRequests: 0
+        }
+    });
+
+    await session.save();
 
     return { accessToken, refreshToken, session };
 }

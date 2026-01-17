@@ -248,9 +248,12 @@ const collegeSchema = new mongoose.Schema({
 TimestampsPlugin(collegeSchema);
 
 // Virtual Fields
-collegeSchema.virtual('activeDepartments').get(function() {
-    return this.departments.filter(dept => dept.studentCount > 0);
-});
+collegeSchema.virtual('activeDepartments').get(function () {
+    return (this.departments || []).filter(
+      dept => dept.studentCount > 0
+    );
+  });
+  
 
 collegeSchema.virtual('isTrial').get(function() {
     return this.subscription.plan === 'free' && 
@@ -277,7 +280,7 @@ collegeSchema.index({ 'stats.users.total': -1 });
 collegeSchema.index({ createdAt: -1 });
 
 // Middleware
-collegeSchema.pre('save', function(next) {
+collegeSchema.pre('save', async function() {
     // Auto-generate code if not provided
     if (!this.code && this.name) {
         const words = this.name.split(' ');
@@ -305,8 +308,6 @@ collegeSchema.pre('save', function(next) {
     if (this.isModified()) {
         this.status.lastActivity = new Date();
     }
-    
-    next();
 });
 
 // Methods

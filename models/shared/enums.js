@@ -28,7 +28,10 @@ module.exports = {
         PDF: 'pdf',
         DOC: 'doc',
         PPT: 'ppt',
-        AUDIO: 'audio'
+        AUDIO: 'audio',
+        RAW: 'raw',
+        DOCUMENT: 'document',
+        OTHER: 'other'
     },
 
     Visibility: {
