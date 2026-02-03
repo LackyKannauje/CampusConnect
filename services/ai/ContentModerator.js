@@ -9,8 +9,11 @@ class ContentModerator {
     }
 
     async initializeProvider(provider, config) {
-        if (provider === 'openai') {
-            const OpenAIService = require('./OpenAIService');
+        if (provider === 'openrouter') {
+            const OpenRouterService = require('./OpenRouterService');
+            this.providers.openrouter = new OpenRouterService(config);
+        } else if (provider === 'openai') {
+            const OpenAIService = require('./OpenAiService');
             this.providers.openai = new OpenAIService(config);
         } else if (provider === 'gemini') {
             const GeminiService = require('./GeminiService');
@@ -30,7 +33,7 @@ class ContentModerator {
         // Check cache first
         const cacheKey = `moderation:${collegeId}:${contentType}:${contentId || this.hashContent(content)}`;
         const cached = await this.cache.get(cacheKey);
-        
+
         if (cached) {
             return { ...cached, cached: true };
         }
@@ -49,8 +52,8 @@ class ContentModerator {
             await this.initializeProvider(provider, config.providers[provider]);
 
             let result;
-            if (provider === 'openai') {
-                result = await this.providers.openai.moderateContent(content, {
+            if (provider === 'openai' || provider === 'openrouter') {
+                result = await this.providers[provider].moderateContent(content, {
                     model,
                     collegeId,
                     userId,
@@ -90,7 +93,7 @@ class ContentModerator {
 
         } catch (error) {
             console.error(`Moderation failed for provider ${provider}:`, error.message);
-            
+
             if (fallback) {
                 // Try fallback provider
                 const fallbackProvider = config.getFallbackProvider(provider);
@@ -113,12 +116,12 @@ class ContentModerator {
 
         const cacheKey = `tags:${collegeId}:${this.hashContent(content)}`;
         const cached = await this.cache.get(cacheKey);
-        
+
         if (cached) {
             return { ...cached, cached: true };
         }
         console.log(cached);
-        
+
         const config = await AIConfig.getConfigForScope('college', collegeId);
         console.log(config.features);
 
@@ -132,9 +135,9 @@ class ContentModerator {
         try {
             await this.initializeProvider(provider, config.providers[provider]);
             let result;
-            if (provider === 'openai') {
+            if (provider === 'openai' || provider === 'openrouter') {
 
-                result = await this.providers.openai.generateTags(content, {
+                result = await this.providers[provider].generateTags(content, {
                     model,
                     maxTags,
                     collegeId
@@ -146,10 +149,10 @@ class ContentModerator {
                     collegeId
                 });
             }
-console.log(result)
+            console.log(result)
             if (result.success) {
                 const tags = result.data.tags || [];
-                
+
                 // Cache for 12 hours
                 await this.cache.set(cacheKey, { tags }, 43200);
 
@@ -173,7 +176,7 @@ console.log(result)
 
         const cacheKey = `summary:${collegeId}:${this.hashContent(content)}`;
         const cached = await this.cache.get(cacheKey);
-        
+
         if (cached) {
             return { ...cached, cached: true };
         }
@@ -190,8 +193,8 @@ console.log(result)
             await this.initializeProvider(provider, config.providers[provider]);
 
             let result;
-            if (provider === 'openai') {
-                result = await this.providers.openai.generateSummary(content, {
+            if (provider === 'openai' || provider === 'openrouter') {
+                result = await this.providers[provider].generateSummary(content, {
                     model,
                     maxLength,
                     collegeId
@@ -205,7 +208,7 @@ console.log(result)
             }
             if (result.success) {
                 const summary = result.data.summary;
-                
+
                 // Cache for 24 hours
                 await this.cache.set(cacheKey, { summary }, 86400);
 
@@ -256,8 +259,8 @@ console.log(result)
         try {
             await this.initializeProvider(provider, config.providers[provider]);
 
-            if (provider === 'openai') {
-                const result = await this.providers.openai.generateEmbedding(content, {
+            if (provider === 'openai' || provider === 'openrouter') {
+                const result = await this.providers[provider].generateEmbedding(content, {
                     model,
                     collegeId
                 });
@@ -288,50 +291,339 @@ console.log(result)
         return null;
     }
 
-    // Helper Methods
-    hashContent(content) {
-        // Simple hash for caching
-        let hash = 0;
-        for (let i = 0; i < content.length; i++) {
-            hash = ((hash << 5) - hash) + content.charCodeAt(i);
-            hash |= 0;
-        }
-        return hash.toString(36);
+   
+    // Add these methods to your existing ContentModerator class
+
+async chat(message, context = {}, options = {}) {
+    const { collegeId, userId, conversationId } = options;
+
+    // Check cache for similar conversations
+    const cacheKey = `chat:${collegeId}:${conversationId || this.hashContent(message)}`;
+    const cached = await this.cache.get(cacheKey);
+    
+    if (cached) {
+        return { ...cached, cached: true };
     }
 
-    basicContentCheck(content) {
-        const blockedPatterns = [
-            /(?:http|https):\/\/[^\s]+/g, // URLs
-            /[\d]{10,}/g, // Phone numbers
-            /[\w\.-]+@[\w\.-]+\.[\w]{2,}/g // Emails
-        ];
-
-        const blockedKeywords = ['spam', 'scam', 'fraud', 'buy now', 'click here'];
-
-        const issues = [];
-        
-        blockedPatterns.forEach(pattern => {
-            const matches = content.match(pattern);
-            if (matches) issues.push(...matches);
-        });
-
-        const lowerContent = content.toLowerCase();
-        blockedKeywords.forEach(keyword => {
-            if (lowerContent.includes(keyword)) {
-                issues.push(keyword);
-            }
-        });
-
-        return {
-            safe: issues.length === 0,
-            flagged: issues.length > 0,
-            categories: issues.length > 0 ? ['suspicious_patterns'] : [],
-            scores: {},
-            confidence: 0.5,
-            provider: 'basic',
-            issues
+    const config = await AIConfig.getConfigForScope('college', collegeId);
+    if (!config || !config.features.chat) {
+        const fallbackResponse = {
+            message: `I received your message: "${message.substring(0, 50)}..."`,
+            context: context || {},
+            timestamp: new Date(),
+            type: 'text'
         };
+        
+        
+        
+        return fallbackResponse;
     }
+
+    const provider = config.models.chat.provider;
+    const model = config.models.chat.model;
+    const maxTokens = config.models.chat.maxTokens || 1000;
+    const temperature = config.models.chat.temperature || 0.7;
+
+    try {
+        await this.initializeProvider(provider, config.providers[provider]);
+
+        let result;
+        if (provider === 'openai' || provider === 'openrouter') {
+            result = await this.providers[provider].chat(message, {
+                model,
+                maxTokens,
+                temperature,
+                context,
+                collegeId,
+                userId
+            });
+        } else if (provider === 'gemini') {
+            result = await this.providers.gemini.chat(message, {
+                model,
+                maxTokens,
+                temperature,
+                context,
+                collegeId,
+                userId
+            });
+        }
+
+        if (result.success) {
+            const response = {
+                message: result.data.message,
+                context: result.data.context || {},
+                timestamp: new Date(),
+                type: result.data.type || 'text',
+                provider,
+                requestId: result.requestId
+            };
+
+            // Cache for 1 hour for frequent conversations
+            await this.cache.set(cacheKey, response, 3600);
+
+            
+
+            return response;
+        }
+
+    } catch (error) {
+        console.error(`Chat failed:`, error.message);
+    }
+
+    // Fallback response
+    const fallbackResponse = {
+        message: `I received your message: "${message.substring(0, 50)}..."`,
+        context: context || {},
+        timestamp: new Date(),
+        type: 'text',
+        fallback: true
+    };
+
+    
+
+    return fallbackResponse;
+}
+
+async studyAssistant(question, subject, context = {}, options = {}) {
+    const { collegeId, userId, includeSources = true } = options;
+
+    const cacheKey = `study:${collegeId}:${subject}:${this.hashContent(question)}`;
+    const cached = await this.cache.get(cacheKey);
+
+    if (cached) {
+        
+        return { ...cached, cached: true };
+    }
+
+    const config = await AIConfig.getConfigForScope('college', collegeId);
+    console.log(config.features.studyAssistant);
+    if (!config || !config.features.studyAssistant) {
+        const fallbackResponse = {
+            answer: `This is a study assistant response for: "${question.substring(0, 50)}..."`,
+            subject: subject || 'general',
+            sources: [],
+            confidence: 0.8,
+            timestamp: new Date(),
+            fallback: true
+        };
+        
+        return fallbackResponse;
+    }
+
+    const provider = config.models.studyAssistant?.provider || config.models.chat.provider;
+    const model = config.models.studyAssistant?.model || config.models.chat.model;
+    const maxTokens = config.models.studyAssistant?.maxTokens || 1500;
+    const temperature = config.models.studyAssistant?.temperature || 0.3;
+
+    try {
+        await this.initializeProvider(provider, config.providers[provider]);
+
+        let result;
+        if (provider === 'openai' || provider === 'openrouter') {
+            result = await this.providers[provider].studyAssistant(question, {
+                model,
+                maxTokens,
+                temperature,
+                subject,
+                context,
+                collegeId,
+                userId,
+                includeSources
+            });
+        } else if (provider === 'gemini') {
+            result = await this.providers.gemini.studyAssistant(question, {
+                model,
+                maxTokens,
+                temperature,
+                subject,
+                context,
+                collegeId,
+                userId,
+                includeSources
+            });
+        }
+        
+        if (result.success) {
+            const response = {
+                answer: result.data.answer,
+                subject: result.data.subject || subject || 'general',
+                sources: result.data.sources || [],
+                confidence: result.data.confidence || 0.8,
+                timestamp: new Date(),
+                provider,
+                requestId: result.requestId,
+                explanation: result.data.explanation
+            };
+
+            // Cache for 6 hours for educational content
+            await this.cache.set(cacheKey, response, 21600);
+
+          
+
+            return response;
+        }
+
+    } catch (error) {
+        console.error(`Study assistant failed:`, error.message);
+    }
+
+    // Fallback response
+    const fallbackResponse = {
+        answer: `This is a study assistant response for: "${question.substring(0, 50)}..."`,
+        subject: subject || 'general',
+        sources: [],
+        confidence: 0.8,
+        timestamp: new Date(),
+        fallback: true
+    };
+
+
+    return fallbackResponse;
+}
+
+async codeHelp(code, language, question, options = {}) {
+    const { collegeId, userId, explanationLevel = 'detailed' } = options;
+
+    const cacheKey = `code:${collegeId}:${language}:${this.hashContent(code || question)}`;
+    const cached = await this.cache.get(cacheKey);
+
+    if (cached) {
+       
+        return { ...cached, cached: true };
+    }
+
+    const config = await AIConfig.getConfigForScope('college', collegeId);
+    if (!config || !config.features.codeHelp) {
+        const fallbackResponse = {
+            suggestion: `Here's a suggestion for your ${language || 'code'} question.`,
+            language: language || 'unknown',
+            improvedCode: code ? `${code}\n// Improved version` : null,
+            explanation: 'Explanation would go here in production.',
+            timestamp: new Date(),
+            fallback: true
+        };
+        
+      
+        
+        return fallbackResponse;
+    }
+
+    const provider = config.models.codeHelp?.provider || config.models.chat.provider;
+    const model = config.models.codeHelp?.model || config.models.chat.model;
+    const maxTokens = config.models.codeHelp?.maxTokens || 2000;
+    const temperature = config.models.codeHelp?.temperature || 0.1;
+
+    try {
+        await this.initializeProvider(provider, config.providers[provider]);
+
+        let result;
+        if (provider === 'openai' || provider === 'openrouter') {
+            result = await this.providers[provider].codeHelp(code, {
+                model,
+                maxTokens,
+                temperature,
+                language,
+                question,
+                collegeId,
+                userId,
+                explanationLevel
+            });
+        } else if (provider === 'gemini') {
+            result = await this.providers.gemini.codeHelp(code, {
+                model,
+                maxTokens,
+                temperature,
+                language,
+                question,
+                collegeId,
+                userId,
+                explanationLevel
+            });
+        }
+
+        if (result.success) {
+            const response = {
+                suggestion: result.data.suggestion,
+                language: result.data.language || language || 'unknown',
+                improvedCode: result.data.improvedCode || (code ? `${code}\n// Optimized version` : null),
+                explanation: result.data.explanation,
+                timestamp: new Date(),
+                provider,
+                requestId: result.requestId,
+                complexity: result.data.complexity,
+                bestPractices: result.data.bestPractices || []
+            };
+
+            // Cache for 12 hours for code solutions
+            await this.cache.set(cacheKey, response, 43200);
+
+
+
+            return response;
+        }
+
+    } catch (error) {
+        console.error(`Code help failed:`, error.message);
+    }
+
+    // Fallback response
+    const fallbackResponse = {
+        suggestion: `Here's a suggestion for your ${language || 'code'} question.`,
+        language: language || 'unknown',
+        improvedCode: code ? `${code}\n// Improved version` : null,
+        explanation: 'Explanation would go here in production.',
+        timestamp: new Date(),
+        fallback: true
+    };
+
+  
+
+    return fallbackResponse;
+}
+ // Helper Methods
+ hashContent(content) {
+    // Simple hash for caching
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+        hash = ((hash << 5) - hash) + content.charCodeAt(i);
+        hash |= 0;
+    }
+    return hash.toString(36);
+}
+
+basicContentCheck(content) {
+    const blockedPatterns = [
+        /(?:http|https):\/\/[^\s]+/g, // URLs
+        /[\d]{10,}/g, // Phone numbers
+        /[\w\.-]+@[\w\.-]+\.[\w]{2,}/g // Emails
+    ];
+
+    const blockedKeywords = ['spam', 'scam', 'fraud', 'buy now', 'click here'];
+
+    const issues = [];
+
+    blockedPatterns.forEach(pattern => {
+        const matches = content.match(pattern);
+        if (matches) issues.push(...matches);
+    });
+
+    const lowerContent = content.toLowerCase();
+    blockedKeywords.forEach(keyword => {
+        if (lowerContent.includes(keyword)) {
+            issues.push(keyword);
+        }
+    });
+
+    return {
+        safe: issues.length === 0,
+        flagged: issues.length > 0,
+        categories: issues.length > 0 ? ['suspicious_patterns'] : [],
+        scores: {},
+        confidence: 0.5,
+        provider: 'basic',
+        issues
+    };
+}
 }
 
 module.exports = ContentModerator;

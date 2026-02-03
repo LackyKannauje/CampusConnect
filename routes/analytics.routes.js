@@ -339,29 +339,6 @@ router.get('/user/:userId/trends',
     analyticsController.getUserTrends
 );
 
-// Content Analytics
-/**
- * @swagger
- * /analytics/content/{contentId}:
- *   get:
- *     summary: Get content analytics
- *     tags: [Analytics]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: contentId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Content analytics
- */
-router.get('/content/:contentId',
-    authMiddleware.authenticate,
-    analyticsController.getContentAnalytics
-);
 
 /**
  * @swagger
@@ -395,6 +372,31 @@ router.get('/content/popular',
 router.get('/content/trending',
     authMiddleware.authenticate,
     analyticsController.getTrendingContent
+);
+
+
+// Content Analytics
+/**
+ * @swagger
+ * /analytics/content/{contentId}:
+ *   get:
+ *     summary: Get content analytics
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: contentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Content analytics
+ */
+router.get('/content/:contentId',
+    authMiddleware.authenticate,
+    analyticsController.getContentAnalytics
 );
 
 // Predictive Analytics
@@ -614,10 +616,10 @@ router.post('/reports/custom',
  *       200:
  *         description: Report details
  */
-router.get('/reports/:reportId',
-    authMiddleware.authenticate,
-    authMiddleware.authorize(['college_admin', 'admin']),
-    analyticsController.getReport
-);
+// router.get('/reports/:reportId',
+//     authMiddleware.authenticate,
+//     authMiddleware.authorize(['college_admin', 'admin']),
+//     analyticsController.getReport
+// );
 
 module.exports = router;

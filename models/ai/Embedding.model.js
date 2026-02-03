@@ -78,28 +78,53 @@ embeddingSchema.virtual('isIndexed').get(function() {
     return !!this.indexedAt;
 });
 
+// In Embedding model - Add this:
+embeddingSchema.pre('save', async function () {
+    // Ensure vector is an array
+    if (!Array.isArray(this.vector)) {
+      throw new Error('Vector must be an array');
+    }
+  
+    // Ensure all elements are numbers
+    if (this.vector.some(v => typeof v !== 'number')) {
+      throw new Error('Vector must contain only numbers');
+    }
+  
+    // Normalize vector (IMPORTANT for cosine similarity)
+    if (this.vector.length > 0) {
+      const norm = Math.sqrt(
+        this.vector.reduce((sum, val) => sum + val * val, 0)
+      );
+  
+      if (norm > 0) {
+        this.vector = this.vector.map(v => v / norm);
+      }
+    }
+  });
+
+
 // Methods
-embeddingSchema.methods.calculateSimilarity = function(otherVector) {
-    if (!otherVector || this.vector.length !== otherVector.length) {
-        return 0;
-    }
+// embeddingSchema.methods.calculateSimilarity = function(otherVector) {
+//     if (!otherVector || this.vector.length !== otherVector.length) {
+//         return 0;
+//     }
     
-    // Cosine similarity
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
+//     // Cosine similarity
+//     let dotProduct = 0;
+//     let normA = 0;
+//     let normB = 0;
     
-    for (let i = 0; i < this.vector.length; i++) {
-        dotProduct += this.vector[i] * otherVector[i];
-        normA += this.vector[i] * this.vector[i];
-        normB += otherVector[i] * otherVector[i];
-    }
+//     for (let i = 0; i < this.vector.length; i++) {
+//         dotProduct += this.vector[i] * otherVector[i];
+//         normA += this.vector[i] * this.vector[i];
+//         normB += otherVector[i] * otherVector[i];
+//     }
     
-    normA = Math.sqrt(normA);
-    normB = Math.sqrt(normB);
+//     normA = Math.sqrt(normA);
+//     normB = Math.sqrt(normB);
     
-    return normA && normB ? dotProduct / (normA * normB) : 0;
-};
+//     return normA && normB ? dotProduct / (normA * normB) : 0;
+// };
 
 embeddingSchema.methods.markIndexed = function(indexId, clusterId = null) {
     this.indexedAt = new Date();
@@ -109,37 +134,37 @@ embeddingSchema.methods.markIndexed = function(indexId, clusterId = null) {
 };
 
 // Static Methods
-embeddingSchema.statics.findSimilar = function(vector, options = {}) {
-    const {
-        contentType = null,
-        collegeId = null,
-        limit = 10,
-        minSimilarity = 0.7
-    } = options;
+// embeddingSchema.statics.findSimilar = function(vector, options = {}) {
+//     const {
+//         contentType = null,
+//         collegeId = null,
+//         limit = 10,
+//         minSimilarity = 0.7
+//     } = options;
     
-    const query = {};
-    if (contentType) query.contentType = contentType;
-    if (collegeId) query.collegeId = collegeId;
-    if (options.model) query.model = options.model;
+//     const query = {};
+//     if (contentType) query.contentType = contentType;
+//     if (collegeId) query.collegeId = collegeId;
+//     if (options.model) query.model = options.model;
     
-    return this.find(query)
-        .then(embeddings => {
-            return embeddings
-                .map(embedding => ({
-                    embedding,
-                    similarity: embedding.calculateSimilarity(vector)
-                }))
-                .filter(item => item.similarity >= minSimilarity)
-                .sort((a, b) => b.similarity - a.similarity)
-                .slice(0, limit)
-                .map(item => ({
-                    contentId: item.embedding.contentId,
-                    contentType: item.embedding.contentType,
-                    similarity: item.similarity,
-                    metadata: item.embedding.metadata
-                }));
-        });
-};
+//     return this.find(query)
+//         .then(embeddings => {
+//             return embeddings
+//                 .map(embedding => ({
+//                     embedding,
+//                     similarity: embedding.calculateSimilarity(vector)
+//                 }))
+//                 .filter(item => item.similarity >= minSimilarity)
+//                 .sort((a, b) => b.similarity - a.similarity)
+//                 .slice(0, limit)
+//                 .map(item => ({
+//                     contentId: item.embedding.contentId,
+//                     contentType: item.embedding.contentType,
+//                     similarity: item.similarity,
+//                     metadata: item.embedding.metadata
+//                 }));
+//         });
+// };
 
 embeddingSchema.statics.bulkUpsert = async function(embeddings) {
     const operations = embeddings.map(embedding => ({

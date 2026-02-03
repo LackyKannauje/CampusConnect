@@ -6,15 +6,12 @@ const contentSchema = new mongoose.Schema({
     // Core Identification
     contentId: { 
         type: String, 
-        unique: true, 
         required: true,
-        index: true 
     },
     slug: { 
         type: String, 
         lowercase: true,
         trim: true,
-        index: true 
     },
     
     // Ownership
@@ -58,7 +55,6 @@ const contentSchema = new mongoose.Schema({
         type: String, 
         lowercase: true,
         trim: true,
-        index: true 
     }],
     
     // Content Details

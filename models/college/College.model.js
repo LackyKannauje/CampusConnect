@@ -7,17 +7,14 @@ const collegeSchema = new mongoose.Schema({
     code: {
         type: String,
         required: [true, 'College code is required'],
-        unique: true,
         uppercase: true,
         trim: true,
         maxlength: 10,
-        index: true
     },
     name: {
         type: String,
         required: [true, 'College name is required'],
         trim: true,
-        index: true
     },
     
     // Domain & Authentication

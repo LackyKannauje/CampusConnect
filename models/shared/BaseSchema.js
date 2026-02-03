@@ -31,7 +31,6 @@ const AIEnrichedSchema = {
         tags: [{ 
             type: String, 
             lowercase: true,
-            index: true 
         }],
         summary: String,
         sentiment: {

@@ -1,3 +1,974 @@
+// const ContentModerator = require('../../services/ai/ContentModerator');
+// const AIConfig = require('../../models/ai/AIConfig.model');
+// const AIInteraction = require('../../models/ai/AIInteraction.model');
+// const Embedding = require('../../models/ai/Embedding.model');
+// const Content = require('../../models/content/Content.model');
+// const errorMiddleware  = require('../../middleware/error.middleware');
+// const User = require('../../models/user/User.model');
+// const College = require('../../models/college/College.model');
+// const Department = require('../../models/college/Department.model');
+// const VectorSearchService = require('../../services/ai/VectorSearchService');
+// const vectorSearch = new VectorSearchService();
+
+// const contentModerator = new ContentModerator();
+
+// const aiController = {
+//     // Moderate content
+//     moderateContent: errorMiddleware.catchAsync(async (req, res) => {
+//         const { content } = req.body;
+//         const user = req.user;
+
+//         if (!content || typeof content !== 'string') {
+//             return res.status(400).json({ error: 'Content is required' });
+//         }
+
+//         const moderation = await contentModerator.moderateContent(content, {
+//             contentType: 'text',
+//             collegeId: user.academic.collegeId,
+//             userId: user._id,
+//             fallback: true
+//         });
+
+//         res.json({
+//             safe: moderation.safe,
+//             flagged: moderation.flagged,
+//             categories: moderation.categories,
+//             confidence: moderation.confidence,
+//             provider: moderation.provider,
+//             cached: moderation.cached || false
+//         });
+//     }),
+
+//     // Generate tags
+//     generateTags: errorMiddleware.catchAsync(async (req, res) => {
+//         const { content, maxTags = 5 } = req.body;
+//         const user = req.user;
+
+//         if (!content || typeof content !== 'string') {
+//             return res.status(400).json({ error: 'Content is required' });
+//         }
+
+//         const tagResult = await contentModerator.generateTags(content, {
+//             collegeId: user.academic.collegeId,
+//             maxTags
+//         });
+
+//         res.json({
+//             tags: tagResult.tags,
+//             confidence: tagResult.confidence,
+//             provider: tagResult.provider,
+//             cached: tagResult.cached || false
+//         });
+//     }),
+
+//     // Summarize content
+//     summarizeContent: errorMiddleware.catchAsync(async (req, res) => {
+//         const { content, maxLength = 150 } = req.body;
+//         const user = req.user;
+
+//         if (!content || typeof content !== 'string') {
+//             return res.status(400).json({ error: 'Content is required' });
+//         }
+
+//         const summaryResult = await contentModerator.generateSummary(content, {
+//             collegeId: user.academic.collegeId,
+//             maxLength
+//         });
+
+//         res.json({
+//             summary: summaryResult.summary,
+//             originalLength: summaryResult.originalLength,
+//             summaryLength: summaryResult.summaryLength,
+//             compressionRatio: summaryResult.compressionRatio,
+//             provider: summaryResult.provider,
+//             cached: summaryResult.cached || false,
+//             fallback: summaryResult.fallback || false
+//         });
+//     }),
+
+//     // Generate embedding
+//     generateEmbedding: errorMiddleware.catchAsync(async (req, res) => {
+//         const { content, contentType = 'text', contentId } = req.body;
+//         const user = req.user;
+
+//         if (!content || typeof content !== 'string') {
+//             return res.status(400).json({ error: 'Content is required' });
+//         }
+
+//         const embedding = await contentModerator.generateEmbedding(content, {
+//             collegeId: user.academic.collegeId,
+//             contentType,
+//             contentId
+//         });
+
+//         if (Array.isArray(embedding)) {
+//             res.json({
+//                 success: true,
+//                 embedding: embedding.slice(0, 5), // Just first 5 for preview
+//                 dimensions: embedding.length,
+//                 total: embedding.length
+//             });
+//         } else if (embedding && embedding.embedding) {
+//             // Handle cached object format
+//             res.json({
+//                 success: true,
+//                 embedding: embedding.embedding.slice(0, 5),
+//                 dimensions: embedding.embedding.length,
+//                 cached: embedding.cached || false
+//             });
+//         } else {
+//             res.status(500).json({
+//                 success: false,
+//                 error: 'Failed to generate embedding'
+//             });
+//         }
+//     }),
+
+//     // In aiController.js - Add new endpoint:
+// testVectorSearch: errorMiddleware.catchAsync(async (req, res) => {
+//     const { text } = req.body;
+    
+//     // Test embedding generation
+//     const embedding = await contentModerator.generateEmbedding(text, {
+//         collegeId: req.user.academic.collegeId,
+//         contentType: 'test'
+//     });
+    
+//     // Test MongoDB vector search if available
+//     let mongoSearchResult = null;
+//     if (Array.isArray(embedding)) {
+//         try {
+//             mongoSearchResult = await Embedding.aggregate([
+//                 {
+//                     $vectorSearch: {
+//                         index: "embedding_vectors",
+//                         path: "vector",
+//                         queryVector: embedding,
+//                         numCandidates: 10,
+//                         limit: 5
+//                     }
+//                 }
+//             ]);
+//         } catch (error) {
+//             mongoSearchResult = { error: error.message };
+//         }
+//     }
+    
+//     res.json({
+//         text,
+//         embeddingType: Array.isArray(embedding) ? 'array' : typeof embedding,
+//         embeddingLength: Array.isArray(embedding) ? embedding.length : 0,
+//         embeddingSample: Array.isArray(embedding) ? embedding.slice(0, 3) : null,
+//         mongoSearchAvailable: mongoSearchResult && !mongoSearchResult.error,
+//         testResult: {
+//             cache: 'working',
+//             db: 'working',
+//             vectorFormat: Array.isArray(embedding) ? 'correct' : 'incorrect',
+//             mongoSearch: mongoSearchResult ? 'tested' : 'not_tested'
+//         }
+//     });
+// }),
+
+//     // Semantic search
+//     // semanticSearch: errorMiddleware.catchAsync(async (req, res) => {
+//     //     const { query, contentType = 'content', limit = 10 } = req.body;
+//     //     const user = req.user;
+
+//     //     if (!query || typeof query !== 'string') {
+//     //         return res.status(400).json({ error: 'Search query is required' });
+//     //     }
+
+//     //     // Generate embedding for query
+//     //     const queryEmbedding = await contentModerator.generateEmbedding(query, {
+//     //         collegeId: user.academic.collegeId,
+//     //         contentType: 'text'
+//     //     });
+
+//     //     if (!queryEmbedding) {
+//     //         return res.status(500).json({ error: 'Failed to process query' });
+//     //     }
+
+//     //     // Find similar embeddings
+//     //     const similar = await Embedding.findSimilar(queryEmbedding, {
+//     //         contentType,
+//     //         collegeId: user.academic.collegeId,
+//     //         limit: parseInt(limit),
+//     //         minSimilarity: 0.7
+//     //     });
+
+//     //     // Get content details for results
+//     //     const results = await Promise.all(
+//     //         similar.map(async (item) => {
+//     //             let content = null;
+//     //             switch (item.contentType) {
+//     //                 case 'content':
+//     //                     content = await Content.findById(item.contentId)
+//     //                         .select('title excerpt type category')
+//     //                         .populate('authorId', 'profile.firstName profile.lastName');
+//     //                     break;
+//     //                 // Add other content types as needed
+//     //             }
+
+//     //             return {
+//     //                 id: item.contentId,
+//     //                 contentType: item.contentType,
+//     //                 similarity: item.similarity,
+//     //                 content: content ? {
+//     //                     title: content.title,
+//     //                     excerpt: content.excerpt,
+//     //                     type: content.type,
+//     //                     category: content.category,
+//     //                     author: content.authorId ? {
+//     //                         name: content.authorId.profile.fullName
+//     //                     } : null
+//     //                 } : null
+//     //             };
+//     //         })
+//     //     );
+
+//     //     res.json({
+//     //         query,
+//     //         results: results.filter(r => r.content),
+//     //         total: results.length
+//     //     });
+//     // }),
+   
+
+//     semanticSearch: errorMiddleware.catchAsync(async (req, res) => {
+//         const { query, contentType = 'content', limit = 10, minScore = 0.7 } = req.body;
+//         const user = req.user;
+    
+//         if (!query || typeof query !== 'string') {
+//             return res.status(400).json({ error: 'Search query is required' });
+//         }
+    
+//         const queryEmbedding = await contentModerator.generateEmbedding(query, {
+//             collegeId: user.academic.collegeId,
+//             contentType: 'text'
+//         });
+    
+//         if (!queryEmbedding || queryEmbedding.length !== 1536) {
+//             return res.status(500).json({ error: 'Failed to generate valid embedding' });
+//         }
+    
+//         const vectorResults = await vectorSearch.semanticSearch(queryEmbedding, {
+//             contentType,
+//             collegeId: user.academic.collegeId,
+//             limit: parseInt(limit),
+//             minScore: parseFloat(minScore)
+//         });
+    
+//         const results = await Promise.all(
+//             vectorResults.map(async (item) => {
+//                 if (item.contentType !== 'content') return null;
+    
+//                 const content = await Content.findById(item.contentId)
+//                     .select('title excerpt type category')
+//                     .populate('authorId', 'profile.firstName profile.lastName');
+    
+//                 if (!content) return null;
+    
+//                 return {
+//                     id: item.contentId,
+//                     contentType: item.contentType,
+//                     similarity: item.score,
+//                     content: {
+//                         title: content.title,
+//                         excerpt: content.excerpt,
+//                         type: content.type,
+//                         category: content.category,
+//                         author: content.authorId ? {
+//                             name: content.authorId.profile.fullName
+//                         } : null
+//                     }
+//                 };
+//             })
+//         );
+    
+//         const filteredResults = results.filter(Boolean);
+    
+//         res.json({
+//             query,
+//             results: filteredResults,
+//             total: filteredResults.length,
+//             searchType: 'vector'
+//         });
+//     }),
+    
+
+//     // Get suggestions
+//     getSuggestions: errorMiddleware.catchAsync(async (req, res) => {
+//         const { query } = req.query;
+//         const user = req.user;
+
+//         if (!query || query.length < 2) {
+//             return res.status(400).json({ error: 'Query must be at least 2 characters' });
+//         }
+
+//         // Get content suggestions
+//         const contentSuggestions = await Content.find({
+//             collegeId: user.academic.collegeId,
+//             title: new RegExp(query, 'i'),
+//             'moderation.status': 'approved'
+//         })
+//         .select('title type category')
+//         .limit(5);
+
+//         // Get tag suggestions
+//         const tagSuggestions = await Content.aggregate([
+//             {
+//                 $match: {
+//                     collegeId: user.academic.collegeId,
+//                     tags: new RegExp(query, 'i')
+//                 }
+//             },
+//             { $unwind: '$tags' },
+//             {
+//                 $match: {
+//                     tags: new RegExp(query, 'i')
+//                 }
+//             },
+//             {
+//                 $group: {
+//                     _id: '$tags',
+//                     count: { $sum: 1 }
+//                 }
+//             },
+//             { $sort: { count: -1 } },
+//             { $limit: 5 }
+//         ]);
+
+//         res.json({
+//             query,
+//             suggestions: {
+//                 content: contentSuggestions,
+//                 tags: tagSuggestions.map(t => ({
+//                     tag: t._id,
+//                     count: t.count
+//                 }))
+//             }
+//         });
+//     }),
+
+//     // AI Chat
+//     chat: errorMiddleware.catchAsync(async (req, res) => {
+//         const { message, context } = req.body;
+//         const user = req.user;
+
+//         if (!message || typeof message !== 'string') {
+//             return res.status(400).json({ error: 'Message is required' });
+//         }
+
+//         // For now, return a simple response
+//         // In production, integrate with OpenAI/Gemini chat API
+//         const response = {
+//             message: `I received your message: "${message.substring(0, 50)}..."`,
+//             context: context || {},
+//             timestamp: new Date(),
+//             type: 'text'
+//         };
+
+//         res.json(response);
+//     }),
+
+//     // Study assistant
+//     studyAssistant: errorMiddleware.catchAsync(async (req, res) => {
+//         const { question, subject, context } = req.body;
+//         const user = req.user;
+
+//         if (!question || typeof question !== 'string') {
+//             return res.status(400).json({ error: 'Question is required' });
+//         }
+
+//         // For now, return a simple response
+//         // In production, integrate with educational AI
+//         const response = {
+//             answer: `This is a study assistant response for: "${question.substring(0, 50)}..."`,
+//             subject: subject || 'general',
+//             sources: [],
+//             confidence: 0.8,
+//             timestamp: new Date()
+//         };
+
+//         res.json(response);
+//     }),
+
+//     // Code help
+//     codeHelp: errorMiddleware.catchAsync(async (req, res) => {
+//         const { code, language, question } = req.body;
+//         const user = req.user;
+
+//         if (!code && !question) {
+//             return res.status(400).json({ error: 'Code or question is required' });
+//         }
+
+//         // For now, return a simple response
+//         // In production, integrate with code-specific AI
+//         const response = {
+//             suggestion: `Here's a suggestion for your ${language || 'code'} question.`,
+//             language: language || 'unknown',
+//             improvedCode: code ? `${code}\n// Improved version` : null,
+//             explanation: 'Explanation would go here in production.',
+//             timestamp: new Date()
+//         };
+
+//         res.json(response);
+//     }),
+
+//     // Get content recommendations
+//     getContentRecommendations: errorMiddleware.catchAsync(async (req, res) => {
+//         const user = req.user;
+//         const { limit = 10 } = req.query;
+
+//         // Get user's interests from AI profile
+//         const userInterests = user.aiProfile?.detectedInterests?.map(i => i.topic) || [];
+
+//         let recommendedContent = [];
+
+//         if (userInterests.length > 0) {
+//             // Find content with matching tags
+//             recommendedContent = await Content.find({
+//                 collegeId: user.academic.collegeId,
+//                 tags: { $in: userInterests },
+//                 'moderation.status': 'approved',
+//                 authorId: { $ne: user._id } // Don't recommend user's own content
+//             })
+//             .select('title excerpt type category tags featuredMedia engagement.likes engagement.comments')
+//             .populate('authorId', 'profile.firstName profile.lastName profile.avatar')
+//             .sort({ 'engagement.hotScore': -1 })
+//             .limit(parseInt(limit));
+//         } else {
+//             // Fallback: popular content
+//             recommendedContent = await Content.find({
+//                 collegeId: user.academic.collegeId,
+//                 'moderation.status': 'approved'
+//             })
+//             .select('title excerpt type category tags featuredMedia engagement.likes engagement.comments')
+//             .populate('authorId', 'profile.firstName profile.lastName profile.avatar')
+//             .sort({ 'engagement.hotScore': -1 })
+//             .limit(parseInt(limit));
+//         }
+
+//         res.json({
+//             recommendations: recommendedContent.map(content => ({
+//                 id: content._id,
+//                 title: content.title,
+//                 excerpt: content.excerpt,
+//                 type: content.type,
+//                 category: content.category,
+//                 tags: content.tags,
+//                 author: {
+//                     id: content.authorId._id,
+//                     name: content.authorId.profile.fullName,
+//                     avatar: content.authorId.profile.avatar?.url
+//                 },
+//                 engagement: {
+//                     likes: content.engagement.likes.length,
+//                     comments: content.engagement.comments.length
+//                 },
+//                 reason: userInterests.length > 0 ? 'Based on your interests' : 'Popular in your college'
+//             }))
+//         });
+//     }),
+
+//     // Get user recommendations
+//     getUserRecommendations: errorMiddleware.catchAsync(async (req, res) => {
+//         const user = req.user;
+//         const { limit = 10 } = req.query;
+
+//         // Find users with similar interests/department
+//         const similarUsers = await User.find({
+//             'academic.collegeId': user.academic.collegeId,
+//             _id: { $ne: user._id, $nin: user.social.following },
+//             isActive: true,
+//             $or: [
+//                 { 'academic.departmentId': user.academic.departmentId },
+//                 { 'profile.skills': { $in: user.profile.skills || [] } },
+//                 { 'profile.interests': { $in: user.profile.interests || [] } }
+//             ]
+//         })
+//         .select('profile.firstName profile.lastName profile.avatar profile.bio academic.role academic.departmentName')
+//         .limit(parseInt(limit));
+
+//         res.json({
+//             recommendations: similarUsers.map(u => ({
+//                 id: u._id,
+//                 name: u.profile.fullName,
+//                 avatar: u.profile.avatar?.url,
+//                 bio: u.profile.bio,
+//                 role: u.academic.role,
+//                 department: u.academic.departmentName,
+//                 reason: u.academic.departmentId?.equals(user.academic.departmentId) ? 
+//                        'Same department' : 'Similar interests'
+//             }))
+//         });
+//     }),
+
+//     // Get study recommendations
+//     getStudyRecommendations: errorMiddleware.catchAsync(async (req, res) => {
+//         const user = req.user;
+//         const { subject, limit = 10 } = req.query;
+
+//         let query = {
+//             collegeId: user.academic.collegeId,
+//             type: 'study_material',
+//             'moderation.status': 'approved'
+//         };
+
+//         if (subject) {
+//             query['studyMaterial.subject'] = new RegExp(subject, 'i');
+//         } else if (user.academic.departmentName) {
+//             query['studyMaterial.subject'] = new RegExp(user.academic.departmentName, 'i');
+//         }
+
+//         const studyMaterials = await Content.find(query)
+//             .select('title excerpt studyMaterial engagement.downloads engagement.views')
+//             .populate('authorId', 'profile.firstName profile.lastName profile.avatar')
+//             .sort({ 'engagement.downloads': -1 })
+//             .limit(parseInt(limit));
+
+//         res.json({
+//             recommendations: studyMaterials.map(material => ({
+//                 id: material._id,
+//                 title: material.title,
+//                 excerpt: material.excerpt,
+//                 subject: material.studyMaterial?.subject,
+//                 downloads: material.engagement.downloads,
+//                 views: material.engagement.views,
+//                 author: material.authorId ? {
+//                     name: material.authorId.profile.fullName,
+//                     avatar: material.authorId.profile.avatar?.url
+//                 } : null
+//             }))
+//         });
+//     }),
+
+//     // Get AI config
+//     getAIConfig: errorMiddleware.catchAsync(async (req, res) => {
+//         const user = req.user;
+//         const collegeId = user.academic.collegeId;
+
+//         const config = await AIConfig.getConfigForScope('college', collegeId);
+//         if (!config) {
+//             return res.status(404).json({ error: 'AI configuration not found' });
+//         }
+
+//         // Remove sensitive API keys
+//         const safeConfig = {
+//             models: config.models,
+//             features: config.features,
+//             rateLimits: config.rateLimits,
+//             cache: config.cache,
+//             budget: {
+//                 monthlyLimit: config.budget.monthlyLimit,
+//                 currentMonthSpent: config.budget.currentMonthSpent,
+//                 budgetRemaining: config.budgetRemaining,
+//                 budgetPercentage: config.budgetPercentage
+//             }
+//         };
+
+//         res.json(safeConfig);
+//     }),
+
+//     // Update AI config
+//     updateAIConfig: errorMiddleware.catchAsync(async (req, res) => {
+//         const user = req.user;
+//         const collegeId = user.academic.collegeId;
+//         const updates = req.body;
+
+//         let config = await AIConfig.getConfigForScope('college', collegeId);
+//         if (!config) {
+//             config = new AIConfig({
+//                 scope: 'college',
+//                 scopeId: collegeId
+//             });
+//         }
+
+//         // Update allowed fields
+//         if (updates.models) config.models = { ...config.models, ...updates.models };
+//         if (updates.features) config.features = { ...config.features, ...updates.features };
+//         if (updates.rateLimits) config.rateLimits = { ...config.rateLimits, ...updates.rateLimits };
+//         if (updates.cache) config.cache = { ...config.cache, ...updates.cache };
+//         if (updates.budget?.monthlyLimit) config.budget.monthlyLimit = updates.budget.monthlyLimit;
+
+//         await config.save();
+
+//         res.json({
+//             message: 'AI configuration updated successfully',
+//             config: {
+//                 models: config.models,
+//                 features: config.features,
+//                 budget: {
+//                     monthlyLimit: config.budget.monthlyLimit,
+//                     currentMonthSpent: config.budget.currentMonthSpent
+//                 }
+//             }
+//         });
+//     }),
+
+//     // Get AI usage
+//     getAIUsage: errorMiddleware.catchAsync(async (req, res) => {
+//         const user = req.user;
+//         const { period = 'monthly', startDate, endDate } = req.query;
+
+//         const usage = await AIInteraction.getUsageStats(
+//             user.academic.collegeId,
+//             startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+//             endDate ? new Date(endDate) : new Date()
+//         );
+
+//         res.json({ period, usage });
+//     }),
+
+//     // Get AI cost
+//     getAICost: errorMiddleware.catchAsync(async (req, res) => {
+//         const user = req.user;
+//         const { period = 'monthly' } = req.query;
+
+//         const costAnalysis = await AIInteraction.getCostAnalysis(
+//             user.academic.collegeId,
+//             period
+//         );
+
+//         res.json({ period, costAnalysis });
+//     }),
+
+//     // Get top AI users
+//     getTopAIUsers: errorMiddleware.catchAsync(async (req, res) => {
+//         const user = req.user;
+
+//         const topUsers = await AIInteraction.getTopUsers(user.academic.collegeId, 10);
+
+//         res.json({ topUsers });
+//     }),
+
+//     // Submit feedback
+//     submitFeedback: errorMiddleware.catchAsync(async (req, res) => {
+//         const { requestId } = req.params;
+//         const { rating, helpful, corrections } = req.body;
+//         const user = req.user;
+
+//         const interaction = await AIInteraction.findOne({
+//             requestId,
+//             userId: user._id
+//         });
+
+//         if (!interaction) {
+//             return res.status(404).json({ error: 'AI interaction not found' });
+//         }
+
+//         interaction.feedback = {
+//             rating,
+//             helpful,
+//             corrections
+//         };
+
+//         await interaction.save();
+
+//         res.json({ message: 'Feedback submitted successfully' });
+//     }),
+
+//     // Get AI health
+//     getAIHealth: errorMiddleware.catchAsync(async (req, res) => {
+//         // Check AI service availability
+//         const health = {
+//             status: 'operational',
+//             timestamp: new Date(),
+//             services: {
+//                 openai: 'operational', // Would actually ping OpenAI API
+//                 gemini: 'operational', // Would actually ping Gemini API
+//                 moderation: 'operational',
+//                 embeddings: 'operational'
+//             },
+//             cache: {
+//                 hits: 0, // Would get from cache stats
+//                 misses: 0,
+//                 hitRate: '0%'
+//             },
+//             lastChecked: new Date()
+//         };
+
+//         res.json(health);
+//     }),
+
+//     // Create AI config (super admin only)
+//     createAIConfig: errorMiddleware.catchAsync(async (req, res) => {
+//         const { scope, scopeId, config } = req.body;
+//         const user = req.user;
+
+//         // Validate scope
+//         const validScopes = ['global', 'college', 'department', 'user'];
+//         if (!validScopes.includes(scope)) {
+//             return res.status(400).json({ 
+//                 error: 'Invalid scope. Must be: global, college, department, or user' 
+//             });
+//         }
+
+//         // Check if config already exists
+//         const existingConfig = await AIConfig.findOne({ scope, scopeId });
+//         if (existingConfig) {
+//             return res.status(400).json({ error: 'AI config already exists for this scope' });
+//         }
+
+//         // Validate scopeId based on scope
+//         if (scope === 'college' && scopeId) {
+//             const college = await College.findById(scopeId);
+//             if (!college) {
+//                 return res.status(404).json({ error: 'College not found' });
+//             }
+//         }
+
+//         if (scope === 'department' && scopeId) {
+//             const department = await Department.findById(scopeId);
+//             if (!department) {
+//                 return res.status(404).json({ error: 'Department not found' });
+//             }
+//         }
+
+//         if (scope === 'user' && scopeId) {
+//             const user = await User.findById(scopeId);
+//             if (!user) {
+//                 return res.status(404).json({ error: 'User not found' });
+//             }
+//         }
+
+//         // Create new config
+//         const aiConfig = new AIConfig({
+//             scope,
+//             scopeId: scope === 'global' ? undefined : scopeId,
+//             ...config
+//         });
+
+//         await aiConfig.save();
+
+//         // Remove sensitive data from response
+//         const responseConfig = aiConfig.toObject();
+//         Object.keys(responseConfig.providers).forEach(provider => {
+//             delete responseConfig.providers[provider].apiKey;
+//         });
+
+//         res.status(201).json({
+//             message: 'AI configuration created successfully',
+//             config: responseConfig
+//         });
+//     }),
+
+//     // Get specific config by scope
+//     getSpecificConfig: errorMiddleware.catchAsync(async (req, res) => {
+//         const { scope, scopeId } = req.params;
+//         const user = req.user;
+
+//         // Validate access permissions
+//         if (scope === 'college' && scopeId) {
+//             // User must belong to the college
+//             if (!user.academic.collegeId.equals(scopeId) && user.academic.role !== 'super_admin') {
+//                 return res.status(403).json({ error: 'Access denied' });
+//             }
+//         }
+
+//         if (scope === 'department' && scopeId) {
+//             const department = await Department.findById(scopeId);
+//             if (!department) {
+//                 return res.status(404).json({ error: 'Department not found' });
+//             }
+            
+//             // User must belong to the department's college
+//             if (!user.academic.collegeId.equals(department.collegeId) && 
+//                 user.academic.role !== 'super_admin') {
+//                 return res.status(403).json({ error: 'Access denied' });
+//             }
+//         }
+
+//         if (scope === 'user' && scopeId) {
+//             // Users can only view their own config or super admin
+//             if (!user._id.equals(scopeId) && user.academic.role !== 'super_admin') {
+//                 return res.status(403).json({ error: 'Access denied' });
+//             }
+//         }
+
+//         const config = await AIConfig.findOne({ scope, scopeId: scope === 'global' ? undefined : scopeId });
+
+//         if (!config) {
+//             return res.status(404).json({ error: 'AI configuration not found' });
+//         }
+
+//         // Remove sensitive data from response
+//         const safeConfig = config.toObject();
+//         Object.keys(safeConfig.providers).forEach(provider => {
+//             delete safeConfig.providers[provider].apiKey;
+//         });
+
+//         res.json(safeConfig);
+//     }),
+
+//     // Create AI interaction (for manual tracking)
+//     createInteraction: errorMiddleware.catchAsync(async (req, res) => {
+//         const { 
+//             service, 
+//             model, 
+//             endpoint, 
+//             input, 
+//             context,
+//             metadata = {} 
+//         } = req.body;
+//         const user = req.user;
+
+//         // Validate required fields
+//         if (!service || !model || !endpoint || !input) {
+//             return res.status(400).json({ 
+//                 error: 'service, model, endpoint, and input are required' 
+//             });
+//         }
+
+//         const validServices = ['openai', 'gemini', 'huggingface', 'azure', 'custom'];
+//         if (!validServices.includes(service)) {
+//             return res.status(400).json({ 
+//                 error: `Invalid service. Must be one of: ${validServices.join(', ')}` 
+//             });
+//         }
+
+//         const validEndpoints = [
+//             'moderation', 'tagging', 'summarization', 'sentiment',
+//             'translation', 'transcription', 'ocr', 'embeddings',
+//             'chat', 'image_generation', 'code_generation', 'qna',
+//             'custom'
+//         ];
+        
+//         if (!validEndpoints.includes(endpoint)) {
+//             return res.status(400).json({ 
+//                 error: `Invalid endpoint. Must be one of: ${validEndpoints.join(', ')}` 
+//             });
+//         }
+
+//         // Check rate limits
+//         const recentCalls = await AIInteraction.countDocuments({
+//             userId: user._id,
+//             collegeId: user.academic.collegeId,
+//             createdAt: { $gte: new Date(Date.now() - 60 * 1000) } // Last minute
+//         });
+
+//         if (recentCalls >= 100) {
+//             return res.status(429).json({ error: 'Rate limit exceeded. Please wait.' });
+//         }
+
+//         // Create interaction
+//         const interaction = new AIInteraction({
+//             requestId: `${endpoint}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+//             userId: user._id,
+//             collegeId: user.academic.collegeId,
+//             service,
+//             model,
+//             endpoint,
+//             input,
+//             inputMetadata: {
+//                 contentType: typeof input === 'string' ? 'text' : 'json',
+//                 size: JSON.stringify(input).length,
+//                 tokenCount: estimateTokens(JSON.stringify(input))
+//             },
+//             context: {
+//                 source: 'manual_api',
+//                 ...context
+//             },
+//             status: 'pending',
+//             metadata
+//         });
+
+//         await interaction.save();
+
+//         res.status(201).json({
+//             message: 'AI interaction created successfully',
+//             interaction: {
+//                 requestId: interaction.requestId,
+//                 status: interaction.status,
+//                 createdAt: interaction.createdAt
+//             }
+//         });
+//     }),
+
+//     // Get interaction by request ID
+//     getInteraction: errorMiddleware.catchAsync(async (req, res) => {
+//         const { requestId } = req.params;
+//         const user = req.user;
+
+//         const interaction = await AIInteraction.findOne({
+//             requestId,
+//             userId: user._id // Users can only view their own interactions
+//         });
+
+//         if (!interaction) {
+//             return res.status(404).json({ error: 'Interaction not found' });
+//         }
+
+//         res.json({
+//             interaction: {
+//                 requestId: interaction.requestId,
+//                 service: interaction.service,
+//                 model: interaction.model,
+//                 endpoint: interaction.endpoint,
+//                 input: interaction.input,
+//                 output: interaction.output,
+//                 status: interaction.status,
+//                 metrics: interaction.metrics,
+//                 quality: interaction.quality,
+//                 feedback: interaction.feedback,
+//                 createdAt: interaction.createdAt,
+//                 updatedAt: interaction.updatedAt
+//             }
+//         });
+//     }),
+
+//     // Update interaction (for async processing)
+//     updateInteraction: errorMiddleware.catchAsync(async (req, res) => {
+//         const { requestId } = req.params;
+//         const { output, status, metrics, error } = req.body;
+//         const user = req.user;
+
+//         const interaction = await AIInteraction.findOne({
+//             requestId,
+//             userId: user._id
+//         });
+
+//         if (!interaction) {
+//             return res.status(404).json({ error: 'Interaction not found' });
+//         }
+
+//         // Check if interaction can be updated
+//         if (interaction.status === 'completed' || interaction.status === 'failed') {
+//             return res.status(400).json({ error: 'Cannot update completed or failed interaction' });
+//         }
+
+//         // Update fields
+//         if (output !== undefined) interaction.output = output;
+//         if (status) interaction.status = status;
+//         if (metrics) interaction.metrics = { ...interaction.metrics, ...metrics };
+//         if (error) interaction.error = error;
+
+//         // Auto-calculate cost if not provided
+//         if (!interaction.metrics.cost && interaction.metrics.tokens) {
+//             interaction.calculateCost();
+//         }
+
+//         // Update quality score if output is provided
+//         if (output && !interaction.quality.confidence) {
+//             interaction.quality.confidence = 0.8; // Default confidence
+//         }
+
+//         interaction.updatedAt = new Date();
+//         await interaction.save();
+
+//         res.json({
+//             message: 'Interaction updated successfully',
+//             interaction: {
+//                 requestId: interaction.requestId,
+//                 status: interaction.status,
+//                 updatedAt: interaction.updatedAt
+//             }
+//         });
+//     })
+// };
+
+// module.exports = aiController;
+
 const ContentModerator = require('../../services/ai/ContentModerator');
 const AIConfig = require('../../models/ai/AIConfig.model');
 const AIInteraction = require('../../models/ai/AIInteraction.model');
@@ -7,8 +978,18 @@ const errorMiddleware  = require('../../middleware/error.middleware');
 const User = require('../../models/user/User.model');
 const College = require('../../models/college/College.model');
 const Department = require('../../models/college/Department.model');
+const VectorSearchService = require('../../services/ai/VectorSearchService');
+const Analytics = require('../../models/analytics/Analytics.model'); // Added missing import
+const vectorSearch = new VectorSearchService();
 
 const contentModerator = new ContentModerator();
+
+// Helper function for token estimation (was missing)
+function estimateTokens(text) {
+    if (!text) return 0;
+    // Rough estimation: 1 token ≈ 4 characters for English text
+    return Math.ceil(text.length / 4);
+}
 
 const aiController = {
     // Moderate content
@@ -25,6 +1006,14 @@ const aiController = {
             collegeId: user.academic.collegeId,
             userId: user._id,
             fallback: true
+        });
+
+        // Track AI usage analytics
+        await trackAIAnalytics(user.academic.collegeId, 'moderation', {
+            success: moderation.safe !== undefined,
+            cached: moderation.cached || false,
+            provider: moderation.provider,
+            userId: user._id
         });
 
         res.json({
@@ -51,6 +1040,14 @@ const aiController = {
             maxTags
         });
 
+        // Track AI usage analytics
+        await trackAIAnalytics(user.academic.collegeId, 'tagging', {
+            success: tagResult.tags !== undefined,
+            cached: tagResult.cached || false,
+            provider: tagResult.provider,
+            userId: user._id
+        });
+
         res.json({
             tags: tagResult.tags,
             confidence: tagResult.confidence,
@@ -71,6 +1068,15 @@ const aiController = {
         const summaryResult = await contentModerator.generateSummary(content, {
             collegeId: user.academic.collegeId,
             maxLength
+        });
+
+        // Track AI usage analytics
+        await trackAIAnalytics(user.academic.collegeId, 'summarization', {
+            success: summaryResult.summary !== undefined,
+            cached: summaryResult.cached || false,
+            provider: summaryResult.provider,
+            userId: user._id,
+            contentLength: content.length
         });
 
         res.json({
@@ -99,58 +1105,119 @@ const aiController = {
             contentId
         });
 
+        const embeddingArray = Array.isArray(embedding) ? embedding : (embedding?.embedding || []);
+        
+        // Track AI usage analytics
+        await trackAIAnalytics(user.academic.collegeId, 'embeddings', {
+            success: embeddingArray.length > 0,
+            dimensions: embeddingArray.length,
+            contentType: contentType,
+            userId: user._id
+        });
+
+        if (embeddingArray.length > 0) {
+            res.json({
+                success: true,
+                embedding: embeddingArray.slice(0, 5), // Just first 5 for preview
+                dimensions: embeddingArray.length,
+                total: embeddingArray.length,
+                cached: embedding?.cached || false
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: 'Failed to generate embedding'
+            });
+        }
+    }),
+
+    testVectorSearch: errorMiddleware.catchAsync(async (req, res) => {
+        const { text } = req.body;
+        
+        // Test embedding generation
+        const embedding = await contentModerator.generateEmbedding(text, {
+            collegeId: req.user.academic.collegeId,
+            contentType: 'test'
+        });
+        
+        // Test MongoDB vector search if available
+        let mongoSearchResult = null;
+        const embeddingArray = Array.isArray(embedding) ? embedding : (embedding?.embedding || []);
+        
+        if (embeddingArray.length > 0) {
+            try {
+                mongoSearchResult = await Embedding.aggregate([
+                    {
+                        $vectorSearch: {
+                            index: "embedding_vectors",
+                            path: "vector",
+                            queryVector: embeddingArray,
+                            numCandidates: 10,
+                            limit: 5
+                        }
+                    }
+                ]);
+            } catch (error) {
+                mongoSearchResult = { error: error.message };
+            }
+        }
+        
         res.json({
-            embedding: embedding ? embedding.slice(0, 10) : null, // Return first 10 dimensions for preview
-            dimensions: embedding ? embedding.length : 0,
-            generated: !!embedding
+            text,
+            embeddingType: Array.isArray(embedding) ? 'array' : typeof embedding,
+            embeddingLength: embeddingArray.length,
+            embeddingSample: embeddingArray.slice(0, 3),
+            mongoSearchAvailable: mongoSearchResult && !mongoSearchResult.error,
+            testResult: {
+                cache: 'working',
+                db: 'working',
+                vectorFormat: embeddingArray.length > 0 ? 'correct' : 'incorrect',
+                mongoSearch: mongoSearchResult ? 'tested' : 'not_tested'
+            }
         });
     }),
 
-    // Semantic search
     semanticSearch: errorMiddleware.catchAsync(async (req, res) => {
-        const { query, contentType = 'content', limit = 10 } = req.body;
+        const { query, contentType = 'content', limit = 10, minScore = 0.7 } = req.body;
         const user = req.user;
-
+    
         if (!query || typeof query !== 'string') {
             return res.status(400).json({ error: 'Search query is required' });
         }
-
-        // Generate embedding for query
+    
         const queryEmbedding = await contentModerator.generateEmbedding(query, {
             collegeId: user.academic.collegeId,
             contentType: 'text'
         });
 
-        if (!queryEmbedding) {
-            return res.status(500).json({ error: 'Failed to process query' });
+        const embeddingArray = Array.isArray(queryEmbedding) ? queryEmbedding : (queryEmbedding?.embedding || []);
+    
+        if (embeddingArray.length !== 1536) {
+            return res.status(500).json({ error: 'Failed to generate valid embedding' });
         }
-
-        // Find similar embeddings
-        const similar = await Embedding.findSimilar(queryEmbedding, {
+    
+        const vectorResults = await vectorSearch.semanticSearch(embeddingArray, {
             contentType,
             collegeId: user.academic.collegeId,
             limit: parseInt(limit),
-            minSimilarity: 0.7
+            minScore: parseFloat(minScore)
         });
-
-        // Get content details for results
+    
         const results = await Promise.all(
-            similar.map(async (item) => {
-                let content = null;
-                switch (item.contentType) {
-                    case 'content':
-                        content = await Content.findById(item.contentId)
-                            .select('title excerpt type category')
-                            .populate('authorId', 'profile.firstName profile.lastName');
-                        break;
-                    // Add other content types as needed
-                }
-
+            vectorResults.map(async (item) => {
+                if (item.contentType !== 'content') return null;
+    
+                const content = await Content.findById(item.contentId)
+                    .select('title excerpt type category')
+                    .populate('authorId', 'profile.firstName profile.lastName');
+    
+                if (!content) return null;
+    
                 return {
                     id: item.contentId,
                     contentType: item.contentType,
-                    similarity: item.similarity,
-                    content: content ? {
+                    similarity: item.score,
+                    content: {
                         title: content.title,
                         excerpt: content.excerpt,
                         type: content.type,
@@ -158,17 +1225,29 @@ const aiController = {
                         author: content.authorId ? {
                             name: content.authorId.profile.fullName
                         } : null
-                    } : null
+                    }
                 };
             })
         );
+    
+        const filteredResults = results.filter(Boolean);
 
+        // Track semantic search analytics
+        await trackAIAnalytics(user.academic.collegeId, 'semantic_search', {
+            queryLength: query.length,
+            resultsCount: filteredResults.length,
+            userId: user._id,
+            success: filteredResults.length > 0
+        });
+    
         res.json({
             query,
-            results: results.filter(r => r.content),
-            total: results.length
+            results: filteredResults,
+            total: filteredResults.length,
+            searchType: 'vector'
         });
     }),
+    
 
     // Get suggestions
     getSuggestions: errorMiddleware.catchAsync(async (req, res) => {
@@ -225,6 +1304,8 @@ const aiController = {
     }),
 
     // AI Chat
+    // Update your existing controller endpoints
+
     chat: errorMiddleware.catchAsync(async (req, res) => {
         const { message, context } = req.body;
         const user = req.user;
@@ -233,19 +1314,24 @@ const aiController = {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        // For now, return a simple response
-        // In production, integrate with OpenAI/Gemini chat API
-        const response = {
-            message: `I received your message: "${message.substring(0, 50)}..."`,
-            context: context || {},
-            timestamp: new Date(),
-            type: 'text'
-        };
+        const response = await contentModerator.chat(message, context, {
+            collegeId: user.academic.collegeId,
+            userId: user._id,
+            conversationId: req.body.conversationId
+        });
+
+        // Track chat analytics
+        await trackAIAnalytics(user.academic.collegeId, 'chat', {
+            messageLength: message.length,
+            userId: user._id,
+            provider: response.provider,
+            cached: response.cached,
+            fallback: response.fallback
+        });
 
         res.json(response);
     }),
 
-    // Study assistant
     studyAssistant: errorMiddleware.catchAsync(async (req, res) => {
         const { question, subject, context } = req.body;
         const user = req.user;
@@ -254,20 +1340,25 @@ const aiController = {
             return res.status(400).json({ error: 'Question is required' });
         }
 
-        // For now, return a simple response
-        // In production, integrate with educational AI
-        const response = {
-            answer: `This is a study assistant response for: "${question.substring(0, 50)}..."`,
+        const response = await contentModerator.studyAssistant(question, subject, context, {
+            collegeId: user.academic.collegeId,
+            userId: user._id,
+            includeSources: req.body.includeSources !== false
+        });
+
+        // Track study assistant analytics
+        await trackAIAnalytics(user.academic.collegeId, 'study_assistant', {
+            questionLength: question.length,
             subject: subject || 'general',
-            sources: [],
-            confidence: 0.8,
-            timestamp: new Date()
-        };
+            userId: user._id,
+            provider: response.provider,
+            cached: response.cached,
+            fallback: response.fallback
+        });
 
         res.json(response);
     }),
 
-    // Code help
     codeHelp: errorMiddleware.catchAsync(async (req, res) => {
         const { code, language, question } = req.body;
         const user = req.user;
@@ -276,15 +1367,22 @@ const aiController = {
             return res.status(400).json({ error: 'Code or question is required' });
         }
 
-        // For now, return a simple response
-        // In production, integrate with code-specific AI
-        const response = {
-            suggestion: `Here's a suggestion for your ${language || 'code'} question.`,
+        const response = await contentModerator.codeHelp(code, language, question, {
+            collegeId: user.academic.collegeId,
+            userId: user._id,
+            explanationLevel: req.body.explanationLevel || 'detailed'
+        });
+
+        // Track code help analytics
+        await trackAIAnalytics(user.academic.collegeId, 'code_help', {
+            hasCode: !!code,
+            hasQuestion: !!question,
             language: language || 'unknown',
-            improvedCode: code ? `${code}\n// Improved version` : null,
-            explanation: 'Explanation would go here in production.',
-            timestamp: new Date()
-        };
+            userId: user._id,
+            provider: response.provider,
+            cached: response.cached,
+            fallback: response.fallback
+        });
 
         res.json(response);
     }),
@@ -322,6 +1420,14 @@ const aiController = {
             .sort({ 'engagement.hotScore': -1 })
             .limit(parseInt(limit));
         }
+
+        // Track recommendations analytics
+        await trackAIAnalytics(user.academic.collegeId, 'recommendations', {
+            type: 'content',
+            count: recommendedContent.length,
+            basedOnInterests: userInterests.length > 0,
+            userId: user._id
+        });
 
         res.json({
             recommendations: recommendedContent.map(content => ({
@@ -364,6 +1470,13 @@ const aiController = {
         .select('profile.firstName profile.lastName profile.avatar profile.bio academic.role academic.departmentName')
         .limit(parseInt(limit));
 
+        // Track recommendations analytics
+        await trackAIAnalytics(user.academic.collegeId, 'recommendations', {
+            type: 'users',
+            count: similarUsers.length,
+            userId: user._id
+        });
+
         res.json({
             recommendations: similarUsers.map(u => ({
                 id: u._id,
@@ -400,6 +1513,14 @@ const aiController = {
             .populate('authorId', 'profile.firstName profile.lastName profile.avatar')
             .sort({ 'engagement.downloads': -1 })
             .limit(parseInt(limit));
+
+        // Track study recommendations analytics
+        await trackAIAnalytics(user.academic.collegeId, 'recommendations', {
+            type: 'study_materials',
+            count: studyMaterials.length,
+            subject: subject || user.academic.departmentName,
+            userId: user._id
+        });
 
         res.json({
             recommendations: studyMaterials.map(material => ({
@@ -445,11 +1566,45 @@ const aiController = {
     }),
 
     // Update AI config
+    // updateAIConfig: errorMiddleware.catchAsync(async (req, res) => {
+    //     const user = req.user;
+    //     const collegeId = user.academic.collegeId;
+    //     const updates = req.body;
+
+    //     let config = await AIConfig.getConfigForScope('college', collegeId);
+    //     if (!config) {
+    //         config = new AIConfig({
+    //             scope: 'college',
+    //             scopeId: collegeId
+    //         });
+    //     }
+
+    //     // Update allowed fields
+    //     if (updates.models) config.models = { ...config.models, ...updates.models };
+    //     if (updates.features) config.features = { ...config.features, ...updates.features };
+    //     if (updates.rateLimits) config.rateLimits = { ...config.rateLimits, ...updates.rateLimits };
+    //     if (updates.cache) config.cache = { ...config.cache, ...updates.cache };
+    //     if (updates.budget?.monthlyLimit) config.budget.monthlyLimit = updates.budget.monthlyLimit;
+
+    //     await config.save();
+
+    //     res.json({
+    //         message: 'AI configuration updated successfully',
+    //         config: {
+    //             models: config.models,
+    //             features: config.features,
+    //             budget: {
+    //                 monthlyLimit: config.budget.monthlyLimit,
+    //                 currentMonthSpent: config.budget.currentMonthSpent
+    //             }
+    //         }
+    //     });
+    // }),
     updateAIConfig: errorMiddleware.catchAsync(async (req, res) => {
         const user = req.user;
         const collegeId = user.academic.collegeId;
         const updates = req.body;
-
+    
         let config = await AIConfig.getConfigForScope('college', collegeId);
         if (!config) {
             config = new AIConfig({
@@ -457,16 +1612,75 @@ const aiController = {
                 scopeId: collegeId
             });
         }
-
-        // Update allowed fields
-        if (updates.models) config.models = { ...config.models, ...updates.models };
-        if (updates.features) config.features = { ...config.features, ...updates.features };
-        if (updates.rateLimits) config.rateLimits = { ...config.rateLimits, ...updates.rateLimits };
-        if (updates.cache) config.cache = { ...config.cache, ...updates.cache };
-        if (updates.budget?.monthlyLimit) config.budget.monthlyLimit = updates.budget.monthlyLimit;
-
+    
+        // Update models - ensure all model types exist
+        if (updates.models) {
+            // List of all possible model types
+            const modelTypes = [
+                'moderation', 'tagging', 'summarization', 'sentiment', 'embeddings',
+                'chat', 'studyAssistant', 'codeHelp'
+            ];
+            
+            modelTypes.forEach(modelType => {
+                if (updates.models[modelType]) {
+                    // Ensure the model object exists in config
+                    if (!config.models[modelType]) {
+                        // Use defaults from schema if model doesn't exist
+                        config.models[modelType] = {};
+                    }
+                    // Update only the fields provided
+                    Object.keys(updates.models[modelType]).forEach(field => {
+                        if (updates.models[modelType][field] !== undefined) {
+                            config.models[modelType][field] = updates.models[modelType][field];
+                        }
+                    });
+                }
+            });
+        }
+    
+        // Update features
+        if (updates.features) {
+            Object.keys(updates.features).forEach(feature => {
+                if (updates.features[feature] !== undefined) {
+                    config.features[feature] = updates.features[feature];
+                }
+            });
+        }
+    
+        // Update rateLimits
+        if (updates.rateLimits) {
+            ['perMinute', 'perHour', 'perDay', 'burstLimit'].forEach(field => {
+                if (updates.rateLimits[field] !== undefined) {
+                    config.rateLimits[field] = updates.rateLimits[field];
+                }
+            });
+        }
+    
+        // Update cache
+        if (updates.cache) {
+            ['enabled', 'ttl', 'maxSize'].forEach(field => {
+                if (updates.cache[field] !== undefined) {
+                    config.cache[field] = updates.cache[field];
+                }
+            });
+        }
+    
+        // Update budget
+        if (updates.budget) {
+            if (updates.budget.monthlyLimit !== undefined) {
+                config.budget.monthlyLimit = updates.budget.monthlyLimit;
+            }
+            if (updates.budget.alertThreshold !== undefined) {
+                config.budget.alertThreshold = updates.budget.alertThreshold;
+            }
+        }
+    
+        // Mark as modified for Mongoose
+        config.markModified('models');
+        config.markModified('features');
+    
         await config.save();
-
+    
         res.json({
             message: 'AI configuration updated successfully',
             config: {
@@ -474,7 +1688,8 @@ const aiController = {
                 features: config.features,
                 budget: {
                     monthlyLimit: config.budget.monthlyLimit,
-                    currentMonthSpent: config.budget.currentMonthSpent
+                    currentMonthSpent: config.budget.currentMonthSpent,
+                    alertThreshold: config.budget.alertThreshold
                 }
             }
         });
@@ -539,6 +1754,14 @@ const aiController = {
 
         await interaction.save();
 
+        // Track feedback analytics
+        await trackAIAnalytics(user.academic.collegeId, 'feedback', {
+            rating: rating,
+            requestId: requestId,
+            endpoint: interaction.endpoint,
+            userId: user._id
+        });
+
         res.json({ message: 'Feedback submitted successfully' });
     }),
 
@@ -566,7 +1789,7 @@ const aiController = {
     }),
 
     // Create AI config (super admin only)
-        createAIConfig: errorMiddleware.catchAsync(async (req, res) => {
+    createAIConfig: errorMiddleware.catchAsync(async (req, res) => {
         const { scope, scopeId, config } = req.body;
         const user = req.user;
 
@@ -840,5 +2063,68 @@ const aiController = {
         });
     })
 };
+
+// Analytics Helper Function
+async function trackAIAnalytics(collegeId, endpoint, details = {}) {
+    try {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        // Find or create analytics record
+        let analytics = await Analytics.findOne({
+            collegeId,
+            period: 'daily',
+            timestamp: { 
+                $gte: today,
+                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+            }
+        });
+
+        if (!analytics) {
+            analytics = new Analytics({
+                collegeId,
+                period: 'daily',
+                timestamp: today,
+                users: { total: 0, active: 0, new: 0 },
+                content: { total: 0 },
+                engagement: { totalInteractions: 0 }
+            });
+        }
+
+        // Initialize AI metrics if not exists
+        if (!analytics.ai) {
+            analytics.ai = {
+                totalRequests: 0,
+                byEndpoint: new Map(),
+                totalCost: 0,
+                accuracy: 0,
+                cacheHitRate: 0,
+                avgLatency: 0
+            };
+        }
+
+        // Update AI metrics
+        analytics.ai.totalRequests = (analytics.ai.totalRequests || 0) + 1;
+        
+        // Update byEndpoint map
+        if (!analytics.ai.byEndpoint) {
+            analytics.ai.byEndpoint = new Map();
+        }
+        const currentCount = analytics.ai.byEndpoint.get(endpoint) || 0;
+        analytics.ai.byEndpoint.set(endpoint, currentCount + 1);
+
+        // Update cache hit rate if cached
+        if (details.cached) {
+            const cacheHits = (analytics.ai.cacheHits || 0) + 1;
+            const totalRequests = analytics.ai.totalRequests;
+            analytics.ai.cacheHitRate = totalRequests > 0 ? (cacheHits / totalRequests) * 100 : 0;
+            analytics.ai.cacheHits = cacheHits;
+        }
+
+        await analytics.save();
+    } catch (error) {
+        console.error('Error tracking AI analytics:', error);
+    }
+}
 
 module.exports = aiController;

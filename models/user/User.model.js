@@ -9,18 +9,15 @@ const userSchema = new mongoose.Schema({
     // Unique Identifiers
     uid: { 
         type: String, 
-        unique: true, 
         default: () => `user_${crypto.randomBytes(8).toString('hex')}`,
         immutable: true 
     },
     email: { 
         type: String, 
         required: [true, 'Email is required'],
-        unique: true,
         lowercase: true,
         trim: true,
         match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
-        index: true 
     },
     phone: {
         type: String,

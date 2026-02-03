@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const aiController = require('../controllers/ai/ai.controller');
-const validation = require('../utils/validation');
 const authMiddleware = require('../middleware/auth.middleware');
 const rateLimitMiddleware = require('../middleware/rateLimit.middleware');
 
@@ -150,6 +149,12 @@ router.post('/search/semantic',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 30 }),
     aiController.semanticSearch
+);
+
+// test vector
+router.post('/test/vector',
+    authMiddleware.authenticate,
+    aiController.testVectorSearch
 );
 
 /**
@@ -476,31 +481,163 @@ router.get('/health',
 // Add these routes after existing ones
 
 // AI Config Management
-router.post('/config/create', 
+/**
+ * @swagger
+ * /ai/config/create:
+ *   post:
+ *     summary: Create AI config
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - provider
+ *               - model
+ *               - type
+ *             properties:
+ *               provider:
+ *                 type: string
+ *               model:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               isDefault:
+ *                 type: boolean
+ *               config:
+ *                 type: object
+ *     responses:
+ *       201:
+ *         description: Config created
+ */
+router.post('/config/create',
     authMiddleware.authenticate,
     authMiddleware.authorize(['super_admin']),
     aiController.createAIConfig
 );
 
-router.get('/config/:scope/:scopeId', 
+/**
+ * @swagger
+ * /ai/config/{scope}/{scopeId}:
+ *   get:
+ *     summary: Get specific AI config
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: scope
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [global, college, department, user]
+ *       - in: path
+ *         name: scopeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: AI configuration
+ */
+router.get('/config/:scope/:scopeId',
     authMiddleware.authenticate,
     authMiddleware.authorize(['admin', 'college_admin']),
     aiController.getSpecificConfig
 );
 
 // AI Interaction Management
-router.post('/interaction/create', 
+/**
+ * @swagger
+ * /ai/interaction/create:
+ *   post:
+ *     summary: Create AI interaction
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *               - type
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               context:
+ *                 type: object
+ *     responses:
+ *       201:
+ *         description: Interaction created
+ */
+router.post('/interaction/create',
     authMiddleware.authenticate,
     rateLimitMiddleware.aiLimiter({ windowMs: 60000, max: 100 }),
     aiController.createInteraction
 );
 
-router.get('/interaction/:requestId', 
+/**
+ * @swagger
+ * /ai/interaction/{requestId}:
+ *   get:
+ *     summary: Get interaction by ID
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Interaction details
+ */
+router.get('/interaction/:requestId',
     authMiddleware.authenticate,
     aiController.getInteraction
 );
 
-router.post('/interaction/:requestId/update', 
+/**
+ * @swagger
+ * /ai/interaction/{requestId}/update:
+ *   post:
+ *     summary: Update interaction
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               response:
+ *                 type: string
+ *               metadata:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Interaction updated
+ */
+router.post('/interaction/:requestId/update',
     authMiddleware.authenticate,
     aiController.updateInteraction
 );

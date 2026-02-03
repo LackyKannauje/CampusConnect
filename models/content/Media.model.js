@@ -7,9 +7,7 @@ const mediaSchema = new mongoose.Schema({
     // Core Identification
     mediaId: { 
         type: String, 
-        unique: true, 
         required: true,
-        index: true 
     },
     originalName: { 
         type: String, 
@@ -80,7 +78,6 @@ const mediaSchema = new mongoose.Schema({
         tags: [{ 
             type: String, 
             lowercase: true,
-            index: true 
         }],
         subject: String,
         topic: String,

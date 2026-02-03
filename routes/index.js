@@ -22,6 +22,16 @@ router.use(`${API_PREFIX}/ai`, aiRoutes);
 router.use(`${API_PREFIX}/analytics`, analyticsRoutes);
 
 // Health check
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: API health check
+ *     tags: [General]
+ *     responses:
+ *       200:
+ *         description: API is healthy
+ */
 router.get(`${API_PREFIX}/health`, (req, res) => {
     res.status(200).json({
         status: 'healthy',

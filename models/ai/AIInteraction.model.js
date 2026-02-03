@@ -5,15 +5,13 @@ const aiInteractionSchema = new mongoose.Schema({
     // Request Identification
     requestId: {
         type: String,
-        unique: true,
         required: true,
-        index: true
     },
     sessionId: {
         type: String,
         index: true
     },
-    
+
     // User Context
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -26,11 +24,11 @@ const aiInteractionSchema = new mongoose.Schema({
         required: true,
         index: true
     },
-    
+
     // AI Service Details
     service: {
         type: String,
-        enum: ['openai', 'gemini', 'huggingface', 'azure', 'custom'],
+        enum: ['openai', 'openrouter', 'gemini', 'huggingface', 'azure', 'custom'],
         required: true
     },
     model: {
@@ -40,13 +38,13 @@ const aiInteractionSchema = new mongoose.Schema({
     endpoint: {
         type: String,
         enum: [
-            'moderation', 'tagging', 'summarization', 'sentiment',
+            'moderation','study_assistant' ,'tagging', 'summarization', 'sentiment',
             'translation', 'transcription', 'ocr', 'embeddings',
-            'chat', 'image_generation', 'code_generation', 'qna'
+            'chat', 'image_generation', 'code_generation', 'qna', 'code_help'
         ],
         required: true
     },
-    
+
     // Request Data
     input: {
         type: mongoose.Schema.Types.Mixed,
@@ -58,7 +56,7 @@ const aiInteractionSchema = new mongoose.Schema({
         language: String,
         tokenCount: Number
     },
-    
+
     // Response Data
     output: mongoose.Schema.Types.Mixed,
     outputMetadata: {
@@ -67,7 +65,7 @@ const aiInteractionSchema = new mongoose.Schema({
         tokenCount: Number,
         finishReason: String
     },
-    
+
     // Processing Metrics
     metrics: {
         latency: { // in milliseconds
@@ -89,7 +87,7 @@ const aiInteractionSchema = new mongoose.Schema({
         cacheHit: { type: Boolean, default: false },
         retryCount: { type: Number, default: 0 }
     },
-    
+
     // Quality & Accuracy
     quality: {
         confidence: Number,
@@ -101,7 +99,7 @@ const aiInteractionSchema = new mongoose.Schema({
             description: String
         }]
     },
-    
+
     // Status
     status: {
         type: String,
@@ -114,7 +112,7 @@ const aiInteractionSchema = new mongoose.Schema({
         message: String,
         details: mongoose.Schema.Types.Mixed
     },
-    
+
     // Feedback
     feedback: {
         rating: { // 1-5
@@ -127,7 +125,7 @@ const aiInteractionSchema = new mongoose.Schema({
         reported: Boolean,
         reportedReason: String
     },
-    
+
     // Context
     context: {
         source: {
@@ -140,14 +138,13 @@ const aiInteractionSchema = new mongoose.Schema({
         userAgent: String,
         ip: String
     },
-    
+
     // Cache Reference
     cacheKey: String,
     expiresAt: {
         type: Date,
-        index: true
     },
-    
+
     // Base Schema
     ...BaseSchema
 }, {
@@ -167,15 +164,15 @@ aiInteractionSchema.index({ 'quality.confidence': -1 });
 aiInteractionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Virtual Fields
-aiInteractionSchema.virtual('totalCostUSD').get(function() {
+aiInteractionSchema.virtual('totalCostUSD').get(function () {
     return this.metrics.cost?.amount || 0;
 });
 
-aiInteractionSchema.virtual('isSuccessful').get(function() {
+aiInteractionSchema.virtual('isSuccessful').get(function () {
     return this.status === 'completed' || this.status === 'cached';
 });
 
-aiInteractionSchema.virtual('responseTime').get(function() {
+aiInteractionSchema.virtual('responseTime').get(function () {
     return this.metrics.latency?.total || 0;
 });
 
@@ -188,7 +185,7 @@ aiInteractionSchema.virtual('responseTime').get(function() {
 //     return false;
 // };
 // In your AIInteraction model, update markProcessing:
-aiInteractionSchema.methods.markProcessing = function() {
+aiInteractionSchema.methods.markProcessing = function () {
     if (this.status === 'pending') {
         this.status = 'processing';
     }
@@ -196,10 +193,10 @@ aiInteractionSchema.methods.markProcessing = function() {
 };
 
 // Also update markFailed to return this:
-aiInteractionSchema.methods.markFailed = function(error, metrics = {}) {
+aiInteractionSchema.methods.markFailed = function (error, metrics = {}) {
     this.status = 'failed';
     this.error = error;
-    
+
     // Initialize metrics if not present
     if (!this.metrics) {
         this.metrics = {
@@ -210,11 +207,11 @@ aiInteractionSchema.methods.markFailed = function(error, metrics = {}) {
             retryCount: 0
         };
     }
-    
+
     if (metrics.latency) {
         this.metrics.latency = { ...this.metrics.latency, ...metrics.latency };
     }
-    
+
     return this; // Return the document instance
 };
 
@@ -242,7 +239,7 @@ aiInteractionSchema.methods.markFailed = function(error, metrics = {}) {
 //         cacheHit: metrics.cacheHit || false,
 //         retryCount: metrics.retryCount || 0
 //     };
-    
+
 //     return this;
 // };
 
@@ -254,29 +251,29 @@ aiInteractionSchema.methods.markFailed = function(error, metrics = {}) {
 //     return this;
 // };
 
-aiInteractionSchema.methods.markCompleted = function(output, metrics = {}) {
+aiInteractionSchema.methods.markCompleted = function (output, metrics = {}) {
     this.status = 'completed';
     this.output = output;
-    
+
     // Initialize with default values if not present
     if (!this.metrics) {
         this.metrics = {};
     }
-    
+
     // Set latency with defaults
     this.metrics.latency = {
         total: metrics.latency?.total || 0,
         network: metrics.latency?.network || 0,
         processing: metrics.latency?.processing || 0
     };
-    
+
     // Set tokens with defaults
     this.metrics.tokens = {
         input: metrics.tokens?.input || 0,
         output: metrics.tokens?.output || 0,
         total: metrics.tokens?.total || 0
     };
-    
+
     // Set cost with defaults
     this.metrics.cost = {
         amount: metrics.cost?.amount || 0,
@@ -284,7 +281,7 @@ aiInteractionSchema.methods.markCompleted = function(output, metrics = {}) {
         modelCost: metrics.cost?.modelCost || 0,
         apiCost: metrics.cost?.apiCost || 0
     };
-    
+
     // Set other metrics fields
     if (metrics.cacheHit !== undefined) {
         this.metrics.cacheHit = metrics.cacheHit;
@@ -292,7 +289,7 @@ aiInteractionSchema.methods.markCompleted = function(output, metrics = {}) {
     if (metrics.retryCount !== undefined) {
         this.metrics.retryCount = metrics.retryCount;
     }
-    
+
     return this;
 };
 
@@ -303,16 +300,16 @@ aiInteractionSchema.methods.markCompleted = function(output, metrics = {}) {
 //     return this;
 // };
 
-aiInteractionSchema.methods.markCached = function(cacheKey) {
+aiInteractionSchema.methods.markCached = function (cacheKey) {
     this.status = 'cached';
     this.cacheKey = cacheKey;
     this.metrics.cacheHit = true;
     return this;
 };
 
-aiInteractionSchema.methods.calculateCost = function() {
+aiInteractionSchema.methods.calculateCost = function () {
     if (!this.metrics.tokens) return 0;
-    
+
     // Sample pricing (adjust based on your provider)
     const prices = {
         'gpt-4': { input: 0.03, output: 0.06 },
@@ -320,23 +317,23 @@ aiInteractionSchema.methods.calculateCost = function() {
         'gemini-pro': { input: 0.0005, output: 0.0015 },
         'default': { input: 0.001, output: 0.002 }
     };
-    
+
     const modelPrice = prices[this.model] || prices.default;
     const inputCost = (this.metrics.tokens.input / 1000) * modelPrice.input;
     const outputCost = (this.metrics.tokens.output / 1000) * modelPrice.output;
-    
+
     this.metrics.cost = {
         amount: inputCost + outputCost,
         currency: 'USD',
         modelCost: inputCost + outputCost,
         apiCost: 0.001 // Fixed API call cost
     };
-    
+
     return this.metrics.cost.amount;
 };
 
 // Static Methods
-aiInteractionSchema.statics.getUsageStats = function(collegeId, startDate, endDate) {
+aiInteractionSchema.statics.getUsageStats = function (collegeId, startDate, endDate) {
     return this.aggregate([
         {
             $match: {
@@ -353,10 +350,10 @@ aiInteractionSchema.statics.getUsageStats = function(collegeId, startDate, endDa
                     endpoint: '$endpoint'
                 },
                 totalRequests: { $sum: 1 },
-                successfulRequests: { 
+                successfulRequests: {
                     $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
                 },
-                cachedRequests: { 
+                cachedRequests: {
                     $sum: { $cond: [{ $eq: ['$status', 'cached'] }, 1, 0] }
                 },
                 totalCost: { $sum: '$metrics.cost.amount' },
@@ -374,7 +371,7 @@ aiInteractionSchema.statics.getUsageStats = function(collegeId, startDate, endDa
                 totalRequests: 1,
                 successfulRequests: 1,
                 cachedRequests: 1,
-                cacheRate: { 
+                cacheRate: {
                     $multiply: [
                         { $divide: ['$cachedRequests', '$totalRequests'] },
                         100
@@ -390,10 +387,10 @@ aiInteractionSchema.statics.getUsageStats = function(collegeId, startDate, endDa
     ]);
 };
 
-aiInteractionSchema.statics.getCostAnalysis = function(collegeId, period = 'monthly') {
-    const groupFormat = period === 'daily' ? '%Y-%m-%d' : 
-                      period === 'weekly' ? '%Y-%W' : '%Y-%m';
-    
+aiInteractionSchema.statics.getCostAnalysis = function (collegeId, period = 'monthly') {
+    const groupFormat = period === 'daily' ? '%Y-%m-%d' :
+        period === 'weekly' ? '%Y-%W' : '%Y-%m';
+
     return this.aggregate([
         {
             $match: {
@@ -434,7 +431,7 @@ aiInteractionSchema.statics.getCostAnalysis = function(collegeId, period = 'mont
                 endpoints: 1,
                 totalCost: { $round: ['$totalCost', 2] },
                 totalRequests: 1,
-                avgCostPerRequest: { 
+                avgCostPerRequest: {
                     $divide: ['$totalCost', '$totalRequests']
                 }
             }
@@ -442,7 +439,7 @@ aiInteractionSchema.statics.getCostAnalysis = function(collegeId, period = 'mont
     ]);
 };
 
-aiInteractionSchema.statics.getTopUsers = function(collegeId, limit = 10) {
+aiInteractionSchema.statics.getTopUsers = function (collegeId, limit = 10) {
     return this.aggregate([
         {
             $match: {
@@ -474,7 +471,7 @@ aiInteractionSchema.statics.getTopUsers = function(collegeId, limit = 10) {
             $project: {
                 _id: 0,
                 userId: '$_id',
-                name: { 
+                name: {
                     $concat: [
                         '$user.profile.firstName',
                         ' ',
