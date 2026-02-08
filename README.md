@@ -1,4 +1,3 @@
-# 🎓 CampusConnect – Intelligent Backend System
 
 > A **scalable, domain-driven social platform backend** designed for modern campuses — featuring **Multi-Model AI orchestration**, **real-time analytics**, and **enterprise-grade security**.
 
@@ -38,6 +37,7 @@ The backend serves both **Web (React)** and **Mobile (Flutter)** clients via a c
 
 ---
 
+
 ## 🏗 System Architecture
 
 CampusConnect follows a **Layered Architecture** using the  
@@ -46,12 +46,15 @@ CampusConnect follows a **Layered Architecture** using the
 - Clear separation of concerns
 - Testability
 - Horizontal scalability
+- 
+<img width="5675" height="6125" alt="diagram (8)" src="https://github.com/user-attachments/assets/f6d052d5-3081-4ce5-aca5-71ef5cc43c3f" /># 🎓 CampusConnect – Intelligent Backend System
+
 
 ### 🔹 High-Level Flow
 
 Client Applications (React / Flutter)<br>
 ↓<br>
-API Gateway (REST + WebSockets)<br>
+API Gateway (REST)<br>
 ↓<br>
 Controller Layer<br>
 ↓<br>
@@ -60,6 +63,8 @@ Service Layer (Business Logic + AI)<br>
 Repository Layer<br>
 ↓<br>
 MongoDB + Vector Database
+
+<img width="6505" height="4002" alt="diagram (7)" src="https://github.com/user-attachments/assets/015799c8-7c51-488c-a8a8-b6f79a685829" />
 
 
 
@@ -89,6 +94,9 @@ The database is **normalized and performance-optimized** to support large-scale 
   - College → Department → Users
   - Posts → Comments → Reactions
 
+ <img width="6112" height="4145" alt="diagram (13)" src="https://github.com/user-attachments/assets/ce51d04a-7354-4702-a0cb-694b793c62b3" />
+
+
 ---
 
 ## 🚀 Key Features & Modules
@@ -112,6 +120,8 @@ A **model-agnostic AI gateway** that dynamically routes requests to different AI
 
 📁 `services/ai/`
 
+<img width="3870" height="3493" alt="diagram (10)" src="https://github.com/user-attachments/assets/59e5a911-7812-4e2f-9691-505c35dd7e40" />
+
 ---
 
 ### 2️⃣ Secure Authentication Flow
@@ -129,9 +139,13 @@ Enterprise-grade authentication using **JWT + Refresh Tokens**.
 - Token rotation & revocation
 - Middleware-level authorization guards
 
+<img width="3570" height="1965" alt="diagram (14)" src="https://github.com/user-attachments/assets/fb0a72d6-0504-4684-b8f0-80c3ac4141eb" />
+
+
+
 ---
 
-### 3️⃣ Analytics & Predictive Engine
+### 3️⃣ Analytics & Predictive Engine (Not External) (Future)
 
 A **dedicated analytics pipeline** that processes raw activity data.
 
@@ -144,6 +158,9 @@ A **dedicated analytics pipeline** that processes raw activity data.
 - 📈 User growth forecasting
 - 🔁 Churn prediction
 - 📊 Feature engagement analysis
+
+<img width="3826" height="780" alt="diagram (16)" src="https://github.com/user-attachments/assets/d571041a-499d-4850-be3c-bad23ed92059" />
+
 
 ---
 
@@ -161,6 +178,7 @@ Approved → Publish & Index<br>
 Flagged → Manual Review
 
 
+<img width="4018" height="2599" alt="diagram (5)" src="https://github.com/user-attachments/assets/2928bf30-f37a-41a0-8698-c348a20c9af1" />
 
 
 
